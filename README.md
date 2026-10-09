@@ -121,7 +121,7 @@ To maintain high code quality and prevent defects before deployment, standardize
 ## Continuous Integration (CI)
 
 A multi-version GitHub Actions pipeline (`.github/workflows/ci.yml`) triggers on every push and pull request targeting `main` / `master`. It validates:
-- Dependency installation across Python 3.10, 3.11, and 3.12.
+- Dependency installation across Python 3.10, 3.11, 3.12 and 3.14.
 - Code style and linting compliance with `ruff`.
 - Type correctness with `mypy`.
 - Unit test execution and test coverage reports with `pytest`.
