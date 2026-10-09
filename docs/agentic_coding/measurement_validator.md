@@ -98,11 +98,11 @@ print(measurement)  # "98.60 °F"
 
 # 2. Convert to Celsius
 celsius_m = measurement.to_celsius()
-print(celsius_m)    # "37.00 °C"
+print(celsius_m)  # "37.00 °C"
 
 # 3. Direct validation & conversion
 converted = validator.validate_and_convert(36.6, "°C", target_unit="°F")
-print(converted)    # "97.88 °F"
+print(converted)  # "97.88 °F"
 
 # 4. Safe boolean check
 if not validator.is_valid(150.0, "°C"):
