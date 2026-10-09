@@ -66,9 +66,8 @@ class TestTemperatureUnitParsing:
             TemperatureUnit.from_str(invalid_unit)
         assert issubclass(UnknownUnitError, MeasurementValidationError)
         assert issubclass(UnknownUnitError, ValueError)
-        assert (
-            str(invalid_unit).strip() in str(exc_info.value)
-            or "empty" in str(exc_info.value)
+        assert str(invalid_unit).strip() in str(exc_info.value) or "empty" in str(
+            exc_info.value
         )
 
     def test_non_string_unit_parsing_raises_error(self) -> None:
@@ -105,9 +104,7 @@ class TestTemperatureNormalization:
         with pytest.raises(InvalidValueError, match="below absolute zero"):
             normalize_temperature(-500.0, TemperatureUnit.FAHRENHEIT)
 
-    @pytest.mark.parametrize(
-        "invalid_val", [float("nan"), float("inf"), float("-inf")]
-    )
+    @pytest.mark.parametrize("invalid_val", [float("nan"), float("inf"), float("-inf")])
     def test_non_finite_values_raise_error(self, invalid_val: float) -> None:
         with pytest.raises(InvalidValueError, match="must be finite"):
             normalize_temperature(invalid_val, TemperatureUnit.CELSIUS)
@@ -170,8 +167,7 @@ class TestTemperatureValidation:
     def test_custom_physiological_bounds(self) -> None:
         # 34.0°C should pass custom bounds [30.0, 40.0]
         assert (
-            validate_temperature(34.0, "°C", min_celsius=30.0, max_celsius=40.0)
-            == 34.0
+            validate_temperature(34.0, "°C", min_celsius=30.0, max_celsius=40.0) == 34.0
         )
 
         # 34.0°C should fail custom bounds [35.0, 40.0]
