@@ -42,7 +42,7 @@ class TestFileSize:
 
     @pytest.mark.parametrize(
         ("size", "text"),
-        [(512, "512 Bytes"), (2048, "2 KB"), (1536, "1.5 KB"), (5 * 1024**2, "5 MB")],
+        [(512, "512 Bytes"), (2048, "2 KB"), (1536, "1,5 KB"), (5 * 1024**2, "5 MB")],
     )
     def test_format_size(self, size: int, text: str) -> None:
         assert v.format_size(size) == text

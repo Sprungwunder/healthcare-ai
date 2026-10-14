@@ -56,10 +56,11 @@ def max_upload_size() -> int:
 
 
 def format_size(num_bytes: int) -> str:
-    if num_bytes >= 1024 * 1024:
-        return f"{num_bytes / (1024 * 1024):.1f} MB".replace(".0 MB", " MB")
-    if num_bytes >= 1024:
-        return f"{num_bytes / 1024:.1f} KB".replace(".0 KB", " KB")
+    """Human-readable size with a German decimal comma, e.g. "10,5 MB"."""
+    for unit, factor in (("MB", 1024 * 1024), ("KB", 1024)):
+        if num_bytes >= factor:
+            value = f"{num_bytes / factor:.1f}".removesuffix(".0").replace(".", ",")
+            return f"{value} {unit}"
     return f"{num_bytes} Bytes"
 
 
