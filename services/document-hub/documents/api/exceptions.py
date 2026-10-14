@@ -9,7 +9,9 @@ Every error response has the shape::
 
 from typing import Any
 
+from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.http import Http404
 from rest_framework import exceptions, status
 from rest_framework.fields import get_error_detail
 from rest_framework.response import Response
@@ -60,6 +62,10 @@ def exception_handler(exc: Exception, context: dict[str, Any]) -> Response | Non
     if isinstance(exc, DjangoValidationError):
         # Raised by the service layer (e.g. duplicate files); treat like DRF's.
         exc = exceptions.ValidationError(detail=get_error_detail(exc))
+    elif isinstance(exc, Http404):
+        exc = exceptions.NotFound(*exc.args)
+    elif isinstance(exc, DjangoPermissionDenied):
+        exc = exceptions.PermissionDenied(*exc.args)
 
     response = drf_exception_handler(exc, context)
     if response is None or not isinstance(exc, exceptions.APIException):
