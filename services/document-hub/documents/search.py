@@ -89,17 +89,15 @@ def parse_search_params(params: Mapping[str, str]) -> SearchQuery:
 
     document_type = params.get("document_type", "").strip()
     if document_type and document_type not in DocumentType.values:
-        errors["document_type"] = [f"Unbekannter Dokumenttyp „{document_type}“."]
+        errors["document_type"] = [f"Unknown document type “{document_type}”."]
 
     language = params.get("language", "").strip()
     if language and language not in Language.values:
-        errors["language"] = [f"Unbekannte Sprache „{language}“."]
+        errors["language"] = [f"Unknown language “{language}”."]
 
     ordering = params.get("ordering", "").strip() or DEFAULT_ORDERING
     if ordering not in ORDERINGS:
-        errors["ordering"] = [
-            f"Unbekannte Sortierung. Erlaubt: {', '.join(ORDERINGS)}."
-        ]
+        errors["ordering"] = [f"Unknown ordering. Allowed: {', '.join(ORDERINGS)}."]
 
     tags: list[str] = []
     try:

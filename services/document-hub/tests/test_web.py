@@ -74,9 +74,9 @@ class TestAccess:
     @pytest.mark.parametrize(
         ("role", "visible", "hidden"),
         [
-            ("reader", ["Herunterladen"], ["Bearbeiten", "Löschen"]),
-            ("editor", ["Herunterladen", "Bearbeiten"], ["Löschen"]),
-            ("admin", ["Herunterladen", "Bearbeiten", "Löschen"], []),
+            ("reader", ["Download"], ["Edit", "Delete"]),
+            ("editor", ["Download", "Edit"], ["Delete"]),
+            ("admin", ["Download", "Edit", "Delete"], []),
         ],
     )
     def test_buttons_per_role(
@@ -97,14 +97,14 @@ class TestAccess:
     def test_new_button_only_for_editors(
         self, client: Client, users: dict[str, User]
     ) -> None:
-        assert b"Neues Dokument" not in login(client, users["reader"]).get("/").content
-        assert b"Neues Dokument" in login(client, users["editor"]).get("/").content
+        assert b"New document" not in login(client, users["reader"]).get("/").content
+        assert b"New document" in login(client, users["editor"]).get("/").content
 
     def test_login_page_and_logout(
         self, client: Client, users: dict[str, User]
     ) -> None:
         assert client.get("/login/").status_code == 200
-        response = client.post("/login/", {"username": "leser", "password": "pw"})
+        response = client.post("/login/", {"username": "reader", "password": "pw"})
         assert response.status_code == 302
         assert client.get("/").status_code == 200
         assert client.post("/logout/").status_code == 302
@@ -125,7 +125,7 @@ class TestCreate:
         response = client.post("/documents/new/", form_data(), follow=True)
         document = Document.objects.get()
         assert response.redirect_chain[-1][0] == document.get_absolute_url()
-        assert "wurde angelegt" in response.content.decode()
+        assert "was created" in response.content.decode()
         assert document.title == "Leitlinie Präanalytik"
         assert document.published_on == datetime.date(2023, 11, 2)
         assert sorted(document.tag_names()) == ["präanalytik", "routine"]
@@ -147,7 +147,7 @@ class TestCreate:
         assert response.status_code == 200
         form = response.context["form"]
         assert set(form.errors) == {"title", "published_on", "file"}
-        assert "nicht in der Zukunft" in response.content.decode()
+        assert "must not be in the future" in response.content.decode()
         assert not Document.objects.exists()
 
     def test_file_required_on_create(
@@ -165,7 +165,7 @@ class TestCreate:
         settings.DOCUMENT_HUB_MAX_UPLOAD_SIZE = 8
         login(client, users["editor"])
         response = client.post("/documents/new/", form_data())
-        assert "zu groß" in response.context["form"].errors["file"][0]
+        assert "too large" in response.context["form"].errors["file"][0]
 
     def test_duplicate_shown_at_file_field(
         self, client: Client, users: dict[str, User]
@@ -175,7 +175,9 @@ class TestCreate:
         response = client.post(
             "/documents/new/", form_data(file=factories.md_file(content=b"# gleich\n"))
         )
-        assert "bereits als Dokument" in response.context["form"].errors["file"][0]
+        assert (
+            "already exists as document" in response.context["form"].errors["file"][0]
+        )
 
     def test_too_many_tags(self, client: Client, users: dict[str, User]) -> None:
         login(client, users["editor"])
@@ -206,7 +208,7 @@ class TestEditAndDelete:
         data = form_data(title="Neu", tags="c")
         del data["file"]
         response = client.post(f"/documents/{document.pk}/edit/", data, follow=True)
-        assert "wurde gespeichert" in response.content.decode()
+        assert "was saved" in response.content.decode()
         document.refresh_from_db()
         assert document.title == "Neu"
         assert document.tag_names() == ["c"]
@@ -252,10 +254,10 @@ class TestEditAndDelete:
         path = Path(document.file.path)
         login(client, users["admin"])
         confirm = client.get(f"/documents/{document.pk}/delete/")
-        assert "endgültig gelöscht" in confirm.content.decode()
+        assert "deleted permanently" in confirm.content.decode()
         with django_capture_on_commit_callbacks(execute=True):
             response = client.post(f"/documents/{document.pk}/delete/", follow=True)
-        assert "„Weg damit“ wurde gelöscht" in response.content.decode()
+        assert "“Weg damit” was deleted" in response.content.decode()
         assert not Document.objects.exists()
         assert not path.exists()
 
@@ -316,12 +318,12 @@ class TestListAndSearch:
     ) -> None:
         response = login(client, users["reader"]).get("/", {"language": "xx"})
         assert response.status_code == 200
-        assert "Unbekannte Sprache" in response.content.decode()
+        assert "Unknown language" in response.content.decode()
         assert list(response.context["documents"]) == []
 
     def test_empty_result(self, client: Client, users: dict[str, User]) -> None:
         html = login(client, users["reader"]).get("/", {"q": "nix"}).content.decode()
-        assert "Keine Dokumente gefunden" in html
+        assert "No documents found" in html
 
     def test_pagination_keeps_filters(
         self, client: Client, users: dict[str, User]

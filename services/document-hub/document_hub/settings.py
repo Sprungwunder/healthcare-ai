@@ -129,7 +129,7 @@ LOGIN_URL = "login"
 LOGIN_REDIRECT_URL = "documents:list"
 LOGOUT_REDIRECT_URL = "login"
 
-LANGUAGE_CODE = "de"
+LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Europe/Berlin"
 USE_I18N = True
 USE_TZ = True

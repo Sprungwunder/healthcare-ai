@@ -88,8 +88,8 @@ DEMO_DOCUMENTS: list[dict[str, Any]] = [
 ]
 
 DEMO_USERS = [
-    ("demo-leser", permissions.READER, False),
-    ("demo-redakteur", permissions.EDITOR, False),
+    ("demo-reader", permissions.READER, False),
+    ("demo-editor", permissions.EDITOR, False),
     ("demo-admin", permissions.ADMIN, True),
 ]
 

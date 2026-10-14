@@ -53,10 +53,10 @@ def _check_duplicate(checksum: str, exclude: Document | None = None) -> None:
 
 def _duplicate_error(duplicate: Document | None) -> ValidationError:
     if duplicate is None:
-        message = "Diese Datei ist bereits als Dokument vorhanden."
+        message = "This file already exists as a document."
         params: dict[str, Any] = {}
     else:
-        message = "Diese Datei ist bereits als Dokument „%(title)s“ (%(id)s) vorhanden."
+        message = "This file already exists as document “%(title)s” (%(id)s)."
         params = {"title": duplicate.title, "id": str(duplicate.pk)}
     return ValidationError(
         {"file": [ValidationError(message, code=DUPLICATE_FILE, params=params)]}

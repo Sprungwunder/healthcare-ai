@@ -11,7 +11,7 @@ def document_file_response(document: Document) -> FileResponse:
     try:
         handle = document.file.open("rb")
     except FileNotFoundError as exc:
-        raise Http404("Die Datei zu diesem Dokument wurde nicht gefunden.") from exc
+        raise Http404("The file of this document was not found.") from exc
     response = FileResponse(
         handle,
         as_attachment=True,

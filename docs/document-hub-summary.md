@@ -2,7 +2,7 @@
 
 First service in the mono-repo: `services/document-hub/`. It manages medical
 and lab-related documents (file plus metadata) with search, roles, a REST API
-and a German web UI. Later it will be the data source for a RAG assistant. LLM,
+and a web UI. Later it will be the data source for a RAG assistant. LLM,
 embeddings, RAG and Elasticsearch are deliberately not part of this version.
 
 ## Architecture decisions
@@ -19,7 +19,7 @@ embeddings, RAG and Elasticsearch are deliberately not part of this version.
 | Files and transactions | Validate first, then write the file, then the DB row. On failure the new file is removed. Old files are deleted only after commit. | No orphaned or missing files. |
 | Search | `DocumentSearchBackend` protocol, selected via `DOCUMENT_HUB_SEARCH_BACKEND` | An ES backend can be added later without touching API or UI. |
 | Pipeline hooks | Signals `document_created/updated/deleted` via `on_commit`, field `processing_status` | Hook for text extraction and indexing. |
-| Roles | Groups Leser/Redakteur/Administrator via a data migration (`sync_role_groups`) | GET additionally requires the `view` permission (`ModelPermissionsWithView`). |
+| Roles | Groups Reader/Editor/Administrator via data migrations (`sync_role_groups`) | GET additionally requires the `view` permission (`ModelPermissionsWithView`). |
 | Auth | Token before session | Unauthenticated API calls get 401 (not 403). |
 | Error format | `{"error": {"code", "message", "details"}}` for 400/401/403/404/413/415 | Django `ValidationError`s from the services are translated too. |
 | Downloads | Only through permission-checked views, `Cache-Control: private, no-store` | There is no public `MEDIA_URL`. |
@@ -27,7 +27,7 @@ embeddings, RAG and Elasticsearch are deliberately not part of this version.
 | HTTPS hardening | `DJANGO_HTTPS` (default on, except with DEBUG), HSTS preload opt-in only | compose runs plain HTTP locally and turns the hardening off. |
 | Admin | Documents are read-only in the Django admin | Create, edit and delete go through UI/API, so file rules and signals always apply. |
 | Runtime generics | `django-stubs-ext` as a runtime dependency (`monkeypatch()`) | For typed views such as `ListView[Document]`. |
-| Language | UI and user-facing messages in German; code, docs, API docs and CLI in English | See the language rule in the root `AGENTS.md`. |
+| Language | English throughout: code, docs, API docs, CLI, web UI and error messages (`LANGUAGE_CODE = "en-us"`). Content data may be in other languages. | Language rule in the root `AGENTS.md`. The UI was switched from German to English after the first review; migration `0004` renames the existing German role groups and keeps memberships. |
 
 ## What changed
 
@@ -42,6 +42,7 @@ Commits on `feature/document-hub` (PR #5):
 7. `seed_demo`, Dockerfile (+ `Dockerfile.dockerignore`), `compose.yaml`
 8. CI job `document-hub` and doc updates (`services/README.md`, `services/AGENTS.md`, root `AGENTS.md`/`README.md`, `docs/architecture.md`)
 9. This summary; docs switched to English and the language rule added to `AGENTS.md`
+10. Web UI, messages and role names switched to English (migrations `0003`, `0004`)
 
 CI: the `on:` filters now include `services/document-hub/**`. A `changes` job
 (`dorny/paths-filter`) makes sure `document-hub` runs only when the hub, core,
@@ -53,7 +54,7 @@ jobs.
 
 ## Test results (2026-10-14)
 
-- `uv run pytest --cov`: **152 tests passing, coverage 97.7 %** (threshold 90 %). Same result on Python 3.12 and 3.14.
+- `uv run pytest --cov`: **153 tests passing, coverage 97.7 %** (threshold 90 %). Same result on Python 3.12 and 3.14.
 - Same suite against Postgres 17 (compose `db`): passing.
 - `uv run mypy .` (django-stubs, djangorestframework-stubs): no errors.
 - `ruff check .` / `ruff format --check .` from the repo root: clean.

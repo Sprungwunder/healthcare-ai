@@ -28,7 +28,7 @@ SEARCH_PARAMETERS = [
 
 @extend_schema_view(list=extend_schema(parameters=SEARCH_PARAMETERS))
 class DocumentViewSet(viewsets.ModelViewSet[Document]):
-    """Documents: Leser read, Redakteur create/edit, Administrator delete."""
+    """Documents: Reader reads, Editor creates/edits, Administrator deletes."""
 
     queryset = Document.objects.all()
     serializer_class = DocumentSerializer

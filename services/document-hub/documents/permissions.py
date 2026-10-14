@@ -1,7 +1,7 @@
 """Roles are Django groups with model permissions.
 
-- Leser: view, search and download documents.
-- Redakteur: additionally create and edit all documents.
+- Reader: view, search and download documents.
+- Editor: additionally create and edit all documents.
 - Administrator: additionally delete documents and manage users (in the Django
   admin, which also needs `is_staff` on the user account).
 
@@ -13,8 +13,8 @@ from typing import Any
 
 from django.apps import apps as global_apps
 
-READER = "Leser"
-EDITOR = "Redakteur"
+READER = "Reader"
+EDITOR = "Editor"
 ADMIN = "Administrator"
 
 _READER_PERMS = [

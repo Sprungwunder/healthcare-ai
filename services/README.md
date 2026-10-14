@@ -4,7 +4,7 @@ Deployable web services built on top of the `healthcare_ai` core library.
 
 | Service | What it does |
 |---|---|
-| [`document-hub/`](document-hub/README.md) | Django 6 service for medical/lab documents: upload, metadata, search, roles, REST API, German web UI |
+| [`document-hub/`](document-hub/README.md) | Django 6 service for medical/lab documents: upload, metadata, search, roles, REST API, web UI |
 
 ## Conventions
 

@@ -1,7 +1,8 @@
+import importlib
 import uuid
 
 import pytest
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 
 from documents import permissions
 from documents.models import Document, DocumentType, Language, Tag, document_upload_to
@@ -25,8 +26,8 @@ def test_str_representations() -> None:
     assert str(Document(title="SOP Zentrifuge")) == "SOP Zentrifuge"
 
 
-def test_choices_have_german_labels() -> None:
-    assert DocumentType.LAB_PROTOCOL.label == "Laborprotokoll"
+def test_choices_have_english_labels() -> None:
+    assert DocumentType.LAB_PROTOCOL.label == "Lab protocol"
     assert Language.GERMAN.value == "de"
 
 
@@ -45,3 +46,23 @@ def test_sync_role_groups_is_idempotent() -> None:
     permissions.sync_role_groups()
     permissions.sync_role_groups()
     assert Group.objects.filter(name__in=permissions.ROLE_PERMISSIONS).count() == 3
+
+
+@pytest.mark.django_db
+def test_rename_migration_moves_german_groups_with_members() -> None:
+    from django.apps import apps
+
+    rename = importlib.import_module("documents.migrations.0004_rename_role_groups")
+    Group.objects.filter(name__in=["Reader", "Editor"]).delete()
+    old_group = Group.objects.create(name="Leser")
+    user = User.objects.create_user("bestehend")
+    user.groups.add(old_group)
+
+    rename.forwards(apps, None)
+
+    assert not Group.objects.filter(name="Leser").exists()
+    assert user.groups.filter(name=permissions.READER).exists()
+    assert Group.objects.get(name=permissions.EDITOR).permissions.count() == 5
+
+    rename.backwards(apps, None)
+    assert user.groups.filter(name="Leser").exists()

@@ -51,7 +51,7 @@ Stores medical/lab documents (files + metadata) and will feed a RAG assistant.
 - **Pipeline hooks:** `document_created/updated/deleted` signals fire after
   commit; `Document.processing_status`, checksum, MIME type and size prepare
   text extraction and indexing.
-- **Access:** roles are Django groups (Leser, Redakteur, Administrator) with
+- **Access:** roles are Django groups (Reader, Editor, Administrator) with
   model permissions; files are only served through permission-checked views.
 
 See `services/README.md` for the service conventions and

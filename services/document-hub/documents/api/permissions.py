@@ -11,7 +11,7 @@ class ModelPermissionsWithView(DjangoModelPermissions):
     """`DjangoModelPermissions` that also requires the `view` permission for reads.
 
     The stock class lets every authenticated user read; here a user needs
-    `<app>.view_<model>` (role "Leser" or higher) for GET/HEAD/OPTIONS.
+    `<app>.view_<model>` (role "Reader" or higher) for GET/HEAD/OPTIONS.
     """
 
     perms_map: dict[str, list[str]] = {

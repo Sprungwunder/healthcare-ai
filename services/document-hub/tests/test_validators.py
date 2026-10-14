@@ -32,7 +32,7 @@ class TestFileSize:
         with pytest.raises(ValidationError) as exc:
             v.validate_upload(SimpleUploadedFile("a.txt", b"x" * 17))
         assert _code(exc) == v.FILE_TOO_LARGE
-        assert "16 Bytes" in exc.value.messages[0]
+        assert "16 bytes" in exc.value.messages[0]
 
     def test_over_default_limit_is_rejected(self) -> None:
         big = SimpleUploadedFile("a.txt", b"x" * (10 * 1024 * 1024 + 1))
@@ -42,7 +42,7 @@ class TestFileSize:
 
     @pytest.mark.parametrize(
         ("size", "text"),
-        [(512, "512 Bytes"), (2048, "2 KB"), (1536, "1,5 KB"), (5 * 1024**2, "5 MB")],
+        [(512, "512 bytes"), (2048, "2 KB"), (1536, "1.5 KB"), (5 * 1024**2, "5 MB")],
     )
     def test_format_size(self, size: int, text: str) -> None:
         assert v.format_size(size) == text

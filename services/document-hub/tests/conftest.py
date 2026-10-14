@@ -20,8 +20,8 @@ def media_root(settings: Settings, tmp_path: Path) -> Path:
 def users(db: None) -> dict[str, User]:
     """One user per role, plus one without any role."""
     return {
-        "none": factories.make_user("ohne_rolle"),
-        "reader": factories.make_user("leser", permissions.READER),
-        "editor": factories.make_user("redakteur", permissions.EDITOR),
+        "none": factories.make_user("no_role"),
+        "reader": factories.make_user("reader", permissions.READER),
+        "editor": factories.make_user("editor", permissions.EDITOR),
         "admin": factories.make_user("admin", permissions.ADMIN, is_staff=True),
     }

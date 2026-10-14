@@ -19,12 +19,12 @@ from documents.models import Document, DocumentType, Language, Tag
 from documents.web.forms import DocumentForm
 
 ORDERING_LABELS = {
-    "-created_at": "Neueste zuerst",
-    "created_at": "Älteste zuerst",
-    "title": "Titel A–Z",
-    "-title": "Titel Z–A",
-    "-published_on": "Veröffentlichung, neueste",
-    "published_on": "Veröffentlichung, älteste",
+    "-created_at": "Newest first",
+    "created_at": "Oldest first",
+    "title": "Title A–Z",
+    "-title": "Title Z–A",
+    "-published_on": "Published, newest",
+    "published_on": "Published, oldest",
 }
 TAG_SUGGESTION_LIMIT = 200
 
@@ -120,7 +120,7 @@ class _DocumentFormView(RoleRequiredMixin, FormView[DocumentForm]):
 
 class DocumentCreateView(_DocumentFormView):
     permission_required = "documents.add_document"
-    success_message = "Dokument „{}“ wurde angelegt."
+    success_message = "Document “{}” was created."
 
     def save(self, form: DocumentForm) -> Document:
         user = self.request.user
@@ -132,7 +132,7 @@ class DocumentCreateView(_DocumentFormView):
 
 class DocumentUpdateView(_DocumentFormView):
     permission_required = "documents.change_document"
-    success_message = "Dokument „{}“ wurde gespeichert."
+    success_message = "Document “{}” was saved."
 
     def dispatch(
         self, request: HttpRequest, *args: Any, **kwargs: Any
@@ -163,7 +163,7 @@ class DocumentDeleteView(RoleRequiredMixin, TemplateView):
     def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         title = self.document.title
         services.delete_document(self.document)
-        messages.success(request, f"Dokument „{title}“ wurde gelöscht.")
+        messages.success(request, f"Document “{title}” was deleted.")
         return redirect(reverse("documents:list"))
 
 

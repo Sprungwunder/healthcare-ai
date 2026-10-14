@@ -125,7 +125,7 @@ class TestCrud:
         assert sorted(body["tags"]) == ["proben", "präanalytik"]
         assert body["mime_type"] == "application/pdf"
         assert body["processing_status"] == "pending"
-        assert body["created_by"] == "redakteur"
+        assert body["created_by"] == "editor"
         assert body["download_url"].endswith(
             f"/api/v1/documents/{body['id']}/download/"
         )
@@ -297,7 +297,7 @@ class TestErrors:
         assert response.status_code == 413
         body = error(response)
         assert body["code"] == "file_too_large"
-        assert "10 Bytes" in body["details"]["file"][0]
+        assert "10 bytes" in body["details"]["file"][0]
         assert not Document.objects.exists()
 
     @pytest.mark.parametrize(
@@ -364,7 +364,7 @@ class TestErrors:
 class TestTokenAuth:
     def test_obtain_token_and_use_it(self, users: dict[str, User]) -> None:
         response = APIClient().post(
-            "/api/v1/auth/token/", {"username": "leser", "password": "pw"}
+            "/api/v1/auth/token/", {"username": "reader", "password": "pw"}
         )
         assert response.status_code == 200
         token = response.json()["token"]
@@ -374,7 +374,7 @@ class TestTokenAuth:
 
     def test_wrong_password(self, users: dict[str, User]) -> None:
         response = APIClient().post(
-            "/api/v1/auth/token/", {"username": "leser", "password": "falsch"}
+            "/api/v1/auth/token/", {"username": "reader", "password": "wrong"}
         )
         assert response.status_code == 400
         assert error(response)["code"] == "validation_error"

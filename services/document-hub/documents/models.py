@@ -14,26 +14,26 @@ from documents.validators import (
 
 
 class DocumentType(models.TextChoices):
-    LAB_PROTOCOL = "lab_protocol", "Laborprotokoll"
+    LAB_PROTOCOL = "lab_protocol", "Lab protocol"
     SOP = "sop", "SOP"
-    GUIDELINE = "guideline", "Leitlinie"
-    TECHNICAL_MANUAL = "technical_manual", "Technisches Handbuch"
+    GUIDELINE = "guideline", "Guideline"
+    TECHNICAL_MANUAL = "technical_manual", "Technical manual"
 
 
 class Language(models.TextChoices):
     """ISO 639-1 codes. Add a member (and a migration) to support more."""
 
-    GERMAN = "de", "Deutsch"
-    ENGLISH = "en", "Englisch"
+    GERMAN = "de", "German"
+    ENGLISH = "en", "English"
 
 
 class ProcessingStatus(models.TextChoices):
     """State of the (future) text-extraction/indexing pipeline."""
 
-    PENDING = "pending", "Ausstehend"
-    PROCESSING = "processing", "In Bearbeitung"
-    PROCESSED = "processed", "Verarbeitet"
-    FAILED = "failed", "Fehlgeschlagen"
+    PENDING = "pending", "Pending"
+    PROCESSING = "processing", "Processing"
+    PROCESSED = "processed", "Processed"
+    FAILED = "failed", "Failed"
 
 
 class Tag(models.Model):
@@ -60,32 +60,32 @@ def document_upload_to(instance: "Document", filename: str) -> str:
 
 class Document(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    title = models.CharField("Titel", max_length=255, validators=[validate_not_blank])
+    title = models.CharField("Title", max_length=255, validators=[validate_not_blank])
     document_type = models.CharField(
-        "Dokumenttyp", max_length=32, choices=DocumentType.choices
+        "Document type", max_length=32, choices=DocumentType.choices
     )
-    source = models.CharField("Quelle", max_length=255, validators=[validate_not_blank])
-    source_url = models.URLField("Quell-URL", max_length=500, blank=True)
+    source = models.CharField("Source", max_length=255, validators=[validate_not_blank])
+    source_url = models.URLField("Source URL", max_length=500, blank=True)
     published_on = models.DateField(
-        "Veröffentlicht am",
+        "Published on",
         null=True,
         blank=True,
         validators=[validate_not_in_future],
     )
-    language = models.CharField("Sprache", max_length=8, choices=Language.choices)
+    language = models.CharField("Language", max_length=8, choices=Language.choices)
     tags = models.ManyToManyField(
         Tag, related_name="documents", blank=True, verbose_name="Tags"
     )
 
-    file = models.FileField("Datei", upload_to=document_upload_to, max_length=255)
+    file = models.FileField("File", upload_to=document_upload_to, max_length=255)
     # Derived from the uploaded file by the service layer.
-    original_filename = models.CharField("Originaler Dateiname", max_length=255)
-    mime_type = models.CharField("MIME-Typ", max_length=100)
-    file_size = models.PositiveBigIntegerField("Dateigröße (Bytes)")
+    original_filename = models.CharField("Original filename", max_length=255)
+    mime_type = models.CharField("MIME type", max_length=100)
+    file_size = models.PositiveBigIntegerField("File size (bytes)")
     checksum_sha256 = models.CharField("SHA-256", max_length=64, unique=True)
 
     processing_status = models.CharField(
-        "Verarbeitungsstatus",
+        "Processing status",
         max_length=16,
         choices=ProcessingStatus.choices,
         default=ProcessingStatus.PENDING,
@@ -96,15 +96,15 @@ class Document(models.Model):
         null=True,
         blank=True,
         related_name="documents",
-        verbose_name="Angelegt von",
+        verbose_name="Created by",
     )
-    created_at = models.DateTimeField("Angelegt am", auto_now_add=True)
-    updated_at = models.DateTimeField("Geändert am", auto_now=True)
+    created_at = models.DateTimeField("Created at", auto_now_add=True)
+    updated_at = models.DateTimeField("Updated at", auto_now=True)
 
     class Meta:
         ordering = ["-created_at"]
-        verbose_name = "Dokument"
-        verbose_name_plural = "Dokumente"
+        verbose_name = "Document"
+        verbose_name_plural = "Documents"
         indexes = [
             models.Index(fields=["document_type"]),
             models.Index(fields=["language"]),

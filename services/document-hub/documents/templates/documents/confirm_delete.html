@@ -1,13 +1,13 @@
 {% extends "documents/base.html" %}
-{% block title %}Löschen{% endblock %}
+{% block title %}Delete{% endblock %}
 {% block content %}
 <section class="card narrow">
-  <h1>Dokument löschen?</h1>
-  <p>„<strong>{{ document.title }}</strong>“ und die Datei <em>{{ document.original_filename }}</em> werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.</p>
+  <h1>Delete document?</h1>
+  <p>“<strong>{{ document.title }}</strong>” and the file <em>{{ document.original_filename }}</em> will be deleted permanently. This cannot be undone.</p>
   <form method="post" class="form-actions">
     {% csrf_token %}
-    <button type="submit" class="button danger">Endgültig löschen</button>
-    <a class="button" href="{{ document.get_absolute_url }}">Abbrechen</a>
+    <button type="submit" class="button danger">Delete permanently</button>
+    <a class="button" href="{{ document.get_absolute_url }}">Cancel</a>
   </form>
 </section>
 {% endblock %}

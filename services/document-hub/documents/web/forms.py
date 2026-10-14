@@ -17,32 +17,34 @@ _ACCEPT = ",".join(f".{ext}" for ext in ALLOWED_FILE_TYPES)
 class DocumentForm(forms.Form):
     """Create/edit form. Format checks only; `documents.services` decides."""
 
-    title = forms.CharField(label="Titel", max_length=255)
-    document_type = forms.ChoiceField(label="Dokumenttyp", choices=DocumentType.choices)
+    title = forms.CharField(label="Title", max_length=255)
+    document_type = forms.ChoiceField(
+        label="Document type", choices=DocumentType.choices
+    )
     source = forms.CharField(
-        label="Quelle",
+        label="Source",
         max_length=255,
-        help_text="Z. B. Herausgeber, Labor oder Fachgesellschaft.",
+        help_text="E.g. publisher, lab or professional society.",
     )
     source_url = forms.URLField(
-        label="Quell-URL", required=False, max_length=500, assume_scheme="https"
+        label="Source URL", required=False, max_length=500, assume_scheme="https"
     )
     published_on = forms.DateField(
-        label="Veröffentlicht am",
+        label="Published on",
         required=False,
         validators=[validate_not_in_future],
         widget=forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
     )
-    language = forms.ChoiceField(label="Sprache", choices=Language.choices)
+    language = forms.ChoiceField(label="Language", choices=Language.choices)
     tags = forms.CharField(
         label="Tags",
         required=False,
-        help_text="Kommagetrennt, z. B. „hämatologie, routine“. Höchstens 20.",
+        help_text="Comma-separated, e.g. “hematology, routine”. At most 20.",
         widget=forms.TextInput(attrs={"list": "tag-suggestions"}),
     )
     file = forms.FileField(
-        label="Datei",
-        help_text="PDF, DOCX, TXT oder MD.",
+        label="File",
+        help_text="PDF, DOCX, TXT or MD.",
         widget=forms.ClearableFileInput(attrs={"accept": _ACCEPT}),
     )
 
@@ -64,15 +66,15 @@ class DocumentForm(forms.Form):
         if document is not None:
             self.fields["file"].required = False
             self.fields["file"].help_text = (
-                f"Optional: ersetzt „{document.original_filename}“. "
-                "PDF, DOCX, TXT oder MD."
+                f"Optional: replaces “{document.original_filename}”. "
+                "PDF, DOCX, TXT or MD."
             )
             self.fields["file"].widget = forms.FileInput(attrs={"accept": _ACCEPT})
 
     def clean_title(self) -> str:
         title: str = self.cleaned_data["title"].strip()
         if not title:
-            raise ValidationError("Dieses Feld darf nicht leer sein.")
+            raise ValidationError("This field must not be blank.")
         return title
 
     def clean_tags(self) -> list[str]:

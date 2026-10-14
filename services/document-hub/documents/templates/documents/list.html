@@ -1,83 +1,83 @@
 {% extends "documents/base.html" %}
-{% block title %}Dokumente{% endblock %}
+{% block title %}Documents{% endblock %}
 {% block content %}
 <div class="page-head">
-  <h1>Dokumente</h1>
-  {% if perms.documents.add_document %}<a class="button primary" href="{% url 'documents:create' %}">Neues Dokument</a>{% endif %}
+  <h1>Documents</h1>
+  {% if perms.documents.add_document %}<a class="button primary" href="{% url 'documents:create' %}">New document</a>{% endif %}
 </div>
 
 <form method="get" class="filters card" role="search">
   <div class="field">
-    <label for="f-q">Titel</label>
-    <input type="search" id="f-q" name="q" value="{{ filters.q }}" placeholder="Titel enthält …">
+    <label for="f-q">Title</label>
+    <input type="search" id="f-q" name="q" value="{{ filters.q }}" placeholder="Title contains …">
   </div>
   <div class="field">
-    <label for="f-type">Typ</label>
+    <label for="f-type">Type</label>
     <select id="f-type" name="document_type">
-      <option value="">Alle Typen</option>
+      <option value="">All types</option>
       {% for value, label in document_types %}<option value="{{ value }}"{% if filters.document_type == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
   </div>
   <div class="field">
     <label for="f-tags">Tags</label>
-    <input type="text" id="f-tags" name="tags" value="{{ filters.tags }}" list="tag-suggestions" placeholder="z. B. routine, pcr">
+    <input type="text" id="f-tags" name="tags" value="{{ filters.tags }}" list="tag-suggestions" placeholder="e.g. routine, pcr">
   </div>
   <div class="field">
-    <label for="f-lang">Sprache</label>
+    <label for="f-lang">Language</label>
     <select id="f-lang" name="language">
-      <option value="">Alle Sprachen</option>
+      <option value="">All languages</option>
       {% for value, label in languages %}<option value="{{ value }}"{% if filters.language == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
   </div>
   <div class="field">
-    <label for="f-order">Sortierung</label>
+    <label for="f-order">Sort by</label>
     <select id="f-order" name="ordering">
       {% for value, label in orderings %}<option value="{{ value }}"{% if filters.ordering == value %} selected{% endif %}>{{ label }}</option>{% endfor %}
     </select>
   </div>
   <div class="filter-actions">
-    <button type="submit" class="button primary">Suchen</button>
-    <a class="button" href="{% url 'documents:list' %}">Zurücksetzen</a>
+    <button type="submit" class="button primary">Search</button>
+    <a class="button" href="{% url 'documents:list' %}">Reset</a>
   </div>
   {% include "documents/_tag_datalist.html" %}
 </form>
 
 {% if search_errors %}
 <div class="form-errors" role="alert">
-  <p>Die Suche konnte nicht ausgeführt werden:</p>
+  <p>The search could not be run:</p>
   <ul>{% for field, errors in search_errors.items %}{% for error in errors %}<li>{{ error }}</li>{% endfor %}{% endfor %}</ul>
 </div>
 {% endif %}
 
-<p class="result-count">{{ paginator.count|default:0 }} Dokument{{ paginator.count|default:0|pluralize:",e" }}{% if query.is_filtered %} gefunden{% endif %}</p>
+<p class="result-count">{{ paginator.count|default:0 }} document{{ paginator.count|default:0|pluralize }}{% if query.is_filtered %} found{% endif %}</p>
 
 {% if documents %}
 <table class="doc-table">
   <thead>
-    <tr><th>Titel</th><th>Typ</th><th>Sprache</th><th>Tags</th><th>Veröffentlicht</th><th>Angelegt</th></tr>
+    <tr><th>Title</th><th>Type</th><th>Language</th><th>Tags</th><th>Published</th><th>Created</th></tr>
   </thead>
   <tbody>
   {% for document in documents %}
     <tr>
-      <td data-label="Titel"><a href="{{ document.get_absolute_url }}">{{ document.title }}</a></td>
-      <td data-label="Typ">{{ document.get_document_type_display }}</td>
-      <td data-label="Sprache">{{ document.get_language_display }}</td>
+      <td data-label="Title"><a href="{{ document.get_absolute_url }}">{{ document.title }}</a></td>
+      <td data-label="Type">{{ document.get_document_type_display }}</td>
+      <td data-label="Language">{{ document.get_language_display }}</td>
       <td data-label="Tags">{% for tag in document.tags.all %}<span class="tag">{{ tag.name }}</span>{% empty %}<span class="muted">–</span>{% endfor %}</td>
-      <td data-label="Veröffentlicht">{{ document.published_on|date:"d.m.Y"|default:"–" }}</td>
-      <td data-label="Angelegt">{{ document.created_at|date:"d.m.Y" }}</td>
+      <td data-label="Published">{{ document.published_on|date:"Y-m-d"|default:"–" }}</td>
+      <td data-label="Created">{{ document.created_at|date:"Y-m-d" }}</td>
     </tr>
   {% endfor %}
   </tbody>
 </table>
 {% elif not search_errors %}
-<p class="empty card">Keine Dokumente gefunden.</p>
+<p class="empty card">No documents found.</p>
 {% endif %}
 
 {% if is_paginated %}
-<nav class="pagination" aria-label="Seiten">
-  {% if page_obj.has_previous %}<a class="button" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">« Zurück</a>{% endif %}
-  <span>Seite {{ page_obj.number }} von {{ paginator.num_pages }}</span>
-  {% if page_obj.has_next %}<a class="button" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Weiter »</a>{% endif %}
+<nav class="pagination" aria-label="Pages">
+  {% if page_obj.has_previous %}<a class="button" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ page_obj.previous_page_number }}">« Previous</a>{% endif %}
+  <span>Page {{ page_obj.number }} of {{ paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a class="button" href="?{% if page_query %}{{ page_query }}&amp;{% endif %}page={{ page_obj.next_page_number }}">Next »</a>{% endif %}
 </nav>
 {% endif %}
 {% endblock %}

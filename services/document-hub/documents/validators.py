@@ -56,22 +56,21 @@ def max_upload_size() -> int:
 
 
 def format_size(num_bytes: int) -> str:
-    """Human-readable size with a German decimal comma, e.g. "10,5 MB"."""
+    """Human-readable size, e.g. "10.5 MB"."""
     for unit, factor in (("MB", 1024 * 1024), ("KB", 1024)):
         if num_bytes >= factor:
-            value = f"{num_bytes / factor:.1f}".removesuffix(".0").replace(".", ",")
-            return f"{value} {unit}"
-    return f"{num_bytes} Bytes"
+            return f"{num_bytes / factor:.1f}".removesuffix(".0") + f" {unit}"
+    return f"{num_bytes} bytes"
 
 
 def validate_file_size(file: Any) -> None:
     size = int(file.size or 0)
     if size == 0:
-        raise ValidationError("Die Datei ist leer.", code=FILE_EMPTY)
+        raise ValidationError("The file is empty.", code=FILE_EMPTY)
     limit = max_upload_size()
     if size > limit:
         raise ValidationError(
-            "Die Datei ist zu groß (%(size)s). Erlaubt sind höchstens %(limit)s.",
+            "The file is too large (%(size)s). The maximum is %(limit)s.",
             code=FILE_TOO_LARGE,
             params={"size": format_size(size), "limit": format_size(limit)},
         )
@@ -134,16 +133,16 @@ def detect_file_type(file: Any) -> DetectedFileType:
     extension = file_extension(file.name or "")
     if extension not in ALLOWED_FILE_TYPES:
         raise ValidationError(
-            "Dateityp „%(extension)s“ ist nicht erlaubt. Erlaubt sind: %(allowed)s.",
+            "File type “%(extension)s” is not allowed. Allowed: %(allowed)s.",
             code=FILE_TYPE_NOT_ALLOWED,
             params={
-                "extension": extension or "ohne Endung",
+                "extension": extension or "no extension",
                 "allowed": ", ".join(e.upper() for e in ALLOWED_FILE_TYPES),
             },
         )
     if not _CONTENT_CHECKS[extension](file):
         raise ValidationError(
-            "Der Inhalt der Datei passt nicht zur Endung „.%(extension)s“.",
+            "The file content does not match the extension “.%(extension)s”.",
             code=FILE_CONTENT_MISMATCH,
             params={"extension": extension},
         )
@@ -166,7 +165,7 @@ def normalize_tag(name: str) -> str:
 def validate_tag_name(name: str) -> None:
     if not 1 <= len(name) <= TAG_MAX_LENGTH:
         raise ValidationError(
-            "Ein Tag muss 1 bis %(max)d Zeichen lang sein.",
+            "A tag must be 1 to %(max)d characters long.",
             code=TAG_INVALID,
             params={"max": TAG_MAX_LENGTH},
         )
@@ -193,7 +192,7 @@ def normalize_tags(names: str | Iterable[str]) -> list[str]:
             result.append(name)
     if len(result) > MAX_TAGS:
         raise ValidationError(
-            "Höchstens %(max)d Tags pro Dokument.",
+            "At most %(max)d tags per document.",
             code=TOO_MANY_TAGS,
             params={"max": MAX_TAGS},
         )
@@ -203,10 +202,10 @@ def normalize_tags(names: str | Iterable[str]) -> list[str]:
 def validate_not_in_future(value: datetime.date | None) -> None:
     if value is not None and value > timezone.localdate():
         raise ValidationError(
-            "Das Datum darf nicht in der Zukunft liegen.", code=DATE_IN_FUTURE
+            "The date must not be in the future.", code=DATE_IN_FUTURE
         )
 
 
 def validate_not_blank(value: str) -> None:
     if not value.strip():
-        raise ValidationError("Dieses Feld darf nicht leer sein.", code=BLANK)
+        raise ValidationError("This field must not be blank.", code=BLANK)

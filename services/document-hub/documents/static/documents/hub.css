@@ -96,8 +96,8 @@ input[type=file] { font: inherit; }
   .doc-table tr { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: .75rem; padding: .5rem .75rem; }
   .doc-table td { border: 0; padding: .2rem 0; display: grid; grid-template-columns: 7.5rem 1fr; gap: .5rem; }
   .doc-table td::before { content: attr(data-label); font-weight: 600; color: var(--muted); font-size: .85rem; }
-  .doc-table td[data-label="Titel"] { display: block; font-size: 1.05rem; font-weight: 600; }
-  .doc-table td[data-label="Titel"]::before { content: none; }
+  .doc-table td[data-label="Title"] { display: block; font-size: 1.05rem; font-weight: 600; }
+  .doc-table td[data-label="Title"]::before { content: none; }
   .meta { grid-template-columns: 1fr; }
   .meta dd { margin-bottom: .4rem; }
 }

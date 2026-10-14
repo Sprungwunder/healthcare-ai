@@ -35,12 +35,12 @@ def test_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_creates_users_with_password_argument() -> None:
     run("--password", "synthetic-demo-pw")
-    reader = User.objects.get(username="demo-leser")
+    reader = User.objects.get(username="demo-reader")
     admin = User.objects.get(username="demo-admin")
     assert reader.check_password("synthetic-demo-pw")
     assert reader.groups.filter(name=permissions.READER).exists()
     assert admin.is_staff and not reader.is_staff
-    assert Document.objects.filter(created_by__username="demo-redakteur").count() == 6
+    assert Document.objects.filter(created_by__username="demo-editor").count() == 6
 
 
 def test_password_from_env_and_existing_password_kept(

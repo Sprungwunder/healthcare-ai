@@ -17,7 +17,7 @@ from rest_framework.fields import get_error_detail
 from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
-VALIDATION_MESSAGE = "Die Eingabe ist ungültig."
+VALIDATION_MESSAGE = "The input is invalid."
 
 
 class FileRejected(exceptions.APIException):

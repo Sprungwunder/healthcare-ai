@@ -2,7 +2,7 @@
 
 Django service for medical and lab-related documents: lab protocols, SOPs,
 guidelines and technical manuals. It stores the file plus metadata, offers
-search, role-based access, a REST API and a German web UI. Later it will be the
+search, role-based access, a REST API and a web UI. Later it will be the
 data source for a RAG assistant; this version has no LLM, embedding or
 search-engine code yet.
 
@@ -21,7 +21,7 @@ uv run python manage.py runserver
 ```
 
 Open <http://localhost:8000/>. `seed_demo` creates six synthetic documents and,
-if a password is given, the users `demo-leser`, `demo-redakteur` and
+if a password is given, the users `demo-reader`, `demo-editor` and
 `demo-admin`. Without a `.env` the settings refuse to start unless
 `DJANGO_SECRET_KEY` is set, because `DJANGO_DEBUG` defaults to off.
 Create a real admin account with `uv run python manage.py createsuperuser`.
@@ -44,8 +44,8 @@ production keep HTTPS on and run behind a TLS proxy.
 
 | Role (group) | Can |
 |---|---|
-| Leser | view, search and download documents, read the API docs |
-| Redakteur | + create and edit all documents (incl. replacing the file) |
+| Reader | view, search and download documents, read the API docs |
+| Editor | + create and edit all documents (incl. replacing the file) |
 | Administrator | + delete documents; manage users in `/admin/` (needs `is_staff`) |
 
 Users without a role can log in but see nothing (403). Assign roles in the
@@ -74,13 +74,13 @@ Base path `/api/v1/`. Interactive docs at `/api/docs/` (OpenAPI schema at
 
 | Method | Path | Role |
 |---|---|---|
-| GET | `/documents/?q=&document_type=&tags=a,b&language=&ordering=&page=` | Leser |
-| POST | `/documents/` (multipart, with `file`) | Redakteur |
-| GET | `/documents/{id}/` | Leser |
-| PATCH / PUT | `/documents/{id}/` (multipart or JSON; `file` optional) | Redakteur |
+| GET | `/documents/?q=&document_type=&tags=a,b&language=&ordering=&page=` | Reader |
+| POST | `/documents/` (multipart, with `file`) | Editor |
+| GET | `/documents/{id}/` | Reader |
+| PATCH / PUT | `/documents/{id}/` (multipart or JSON; `file` optional) | Editor |
 | DELETE | `/documents/{id}/` | Administrator |
-| GET | `/documents/{id}/download/` | Leser |
-| GET | `/tags/?q=` | Leser |
+| GET | `/documents/{id}/download/` | Reader |
+| GET | `/tags/?q=` | Reader |
 | POST | `/auth/token/` (`username`, `password`) | – |
 
 Search: `q` matches the title (contains, case-insensitive), `tags` requires
@@ -90,10 +90,10 @@ Search: `q` matches the title (contains, case-insensitive), `tags` requires
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:8000/api/v1/auth/token/ \
-  -d username=demo-redakteur -d password='<password>' | jq -r .token)
+  -d username=demo-editor -d password='<password>' | jq -r .token)
 curl -H "Authorization: Token $TOKEN" \
   -F title="SOP Probenannahme" -F document_type=sop -F source="Labor" \
-  -F language=de -F tags="präanalytik, routine" -F file=@sop.pdf \
+  -F language=de -F tags="preanalytics, routine" -F file=@sop.pdf \
   localhost:8000/api/v1/documents/
 curl -H "Authorization: Token $TOKEN" "localhost:8000/api/v1/documents/?tags=routine"
 ```
@@ -101,8 +101,8 @@ curl -H "Authorization: Token $TOKEN" "localhost:8000/api/v1/documents/?tags=rou
 Errors always look like this:
 
 ```json
-{"error": {"code": "validation_error", "message": "Die Eingabe ist ungültig.",
-           "details": {"title": ["Dieses Feld darf nicht leer sein."]}}}
+{"error": {"code": "validation_error", "message": "The input is invalid.",
+           "details": {"title": ["This field must not be blank."]}}}
 ```
 
 | Status | `code` |

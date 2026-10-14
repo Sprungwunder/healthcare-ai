@@ -4,7 +4,7 @@ Read the root `AGENTS.md` (PHI rules) and `services/AGENTS.md` first.
 
 ## What lives here
 Django 6 service that stores medical/lab documents (files + metadata) with a
-REST API (`/api/v1/`) and a server-rendered German web UI. It is the future
+REST API (`/api/v1/`) and a server-rendered web UI. It is the future
 data source for a RAG assistant; there is no LLM/embedding/search-engine code yet.
 
 - `document_hub/`: project (settings from env, URLs, WSGI/ASGI).
@@ -34,7 +34,6 @@ data source for a RAG assistant; there is no LLM/embedding/search-engine code ye
   permissions needs a new data migration calling `sync_role_groups`.
 - Never log request data or file contents. Uploaded files are only served
   through permission-checked download views (no public `MEDIA_URL`).
-- Language: web UI strings and user-facing validation/API error messages are
-  German; everything else (code, comments, docs, OpenAPI descriptions, CLI
-  help/output) is English. See the language rule in the root `AGENTS.md`.
+- Language: everything is English, including the web UI and validation/API
+  error messages (`LANGUAGE_CODE = "en-us"`). See the root `AGENTS.md`.
 - Tests: keep `MEDIA_ROOT` on the tmp dir (autouse fixture in `tests/conftest.py`).

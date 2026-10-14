@@ -22,9 +22,9 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
   identifiers, comments, docstrings, Markdown and other docs, API docs
   (OpenAPI descriptions), CLI help and output, commit messages, PR titles and
   descriptions.
-- Only exception: end-user product text whose language a service defines
-  (e.g. the German web UI and user-facing validation messages of
-  `services/document-hub`). Keep such text in that language.
+- This includes user-facing product text (web UI, validation and API error
+  messages). Only content data may be in other languages (e.g. a document's
+  title or synthetic demo documents with `language="de"`).
 
 ## Commands
 Setup (repo root, in a venv): `pip install -e "packages/healthcare-ai-core[dev]"`.
