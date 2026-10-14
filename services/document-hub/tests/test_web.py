@@ -21,13 +21,13 @@ def login(client: Client, user: User) -> Client:
 
 def form_data(**overrides: Any) -> dict[str, Any]:
     data: dict[str, Any] = {
-        "title": "Leitlinie Präanalytik",
+        "title": "Guideline Preanalytics",
         "document_type": "guideline",
-        "source": "Synthetische Fachgesellschaft",
+        "source": "Synthetic Professional Society",
         "source_url": "",
         "published_on": "2023-11-02",
         "language": "de",
-        "tags": "Präanalytik, Routine",
+        "tags": "Preanalytics, Routine",
         "file": factories.md_file(),
     }
     data.update(overrides)
@@ -126,9 +126,9 @@ class TestCreate:
         document = Document.objects.get()
         assert response.redirect_chain[-1][0] == document.get_absolute_url()
         assert "was created" in response.content.decode()
-        assert document.title == "Leitlinie Präanalytik"
+        assert document.title == "Guideline Preanalytics"
         assert document.published_on == datetime.date(2023, 11, 2)
-        assert sorted(document.tag_names()) == ["präanalytik", "routine"]
+        assert sorted(document.tag_names()) == ["preanalytics", "routine"]
         assert document.created_by == users["editor"]
 
     def test_errors_are_shown_at_the_fields(
@@ -141,7 +141,7 @@ class TestCreate:
             form_data(
                 title="  ",
                 published_on=future,
-                file=factories.txt_file("tarnung.pdf"),
+                file=factories.txt_file("disguised.pdf"),
             ),
         )
         assert response.status_code == 200
@@ -170,10 +170,10 @@ class TestCreate:
     def test_duplicate_shown_at_file_field(
         self, client: Client, users: dict[str, User]
     ) -> None:
-        factories.make_document(file=factories.md_file(content=b"# gleich\n"))
+        factories.make_document(file=factories.md_file(content=b"# same\n"))
         login(client, users["editor"])
         response = client.post(
-            "/documents/new/", form_data(file=factories.md_file(content=b"# gleich\n"))
+            "/documents/new/", form_data(file=factories.md_file(content=b"# same\n"))
         )
         assert (
             "already exists as document" in response.context["form"].errors["file"][0]
@@ -188,29 +188,29 @@ class TestCreate:
     def test_tag_suggestions_are_offered(
         self, client: Client, users: dict[str, User]
     ) -> None:
-        factories.make_document(tags=["hämatologie"])
+        factories.make_document(tags=["hematology"])
         html = login(client, users["editor"]).get("/documents/new/").content.decode()
         assert '<datalist id="tag-suggestions">' in html
-        assert '<option value="hämatologie">' in html
+        assert '<option value="hematology">' in html
 
 
 class TestEditAndDelete:
     def test_edit_prefills_and_saves(
         self, client: Client, users: dict[str, User]
     ) -> None:
-        document = factories.make_document(title="Alt", tags=["a", "b"])
+        document = factories.make_document(title="Old", tags=["a", "b"])
         login(client, users["editor"])
         form = client.get(f"/documents/{document.pk}/edit/").context["form"]
-        assert form.initial["title"] == "Alt"
+        assert form.initial["title"] == "Old"
         assert form.initial["tags"] == "a, b"
         assert not form.fields["file"].required
 
-        data = form_data(title="Neu", tags="c")
+        data = form_data(title="New", tags="c")
         del data["file"]
         response = client.post(f"/documents/{document.pk}/edit/", data, follow=True)
         assert "was saved" in response.content.decode()
         document.refresh_from_db()
-        assert document.title == "Neu"
+        assert document.title == "New"
         assert document.tag_names() == ["c"]
 
     def test_edit_replaces_file(
@@ -225,21 +225,21 @@ class TestEditAndDelete:
         with django_capture_on_commit_callbacks(execute=True):
             client.post(
                 f"/documents/{document.pk}/edit/",
-                form_data(file=factories.pdf_file("neu.pdf")),
+                form_data(file=factories.pdf_file("new.pdf")),
             )
         document.refresh_from_db()
-        assert document.original_filename == "neu.pdf"
+        assert document.original_filename == "new.pdf"
         assert not old_path.exists()
 
     def test_edit_with_duplicate_file_shows_error(
         self, client: Client, users: dict[str, User]
     ) -> None:
-        factories.make_document(file=factories.txt_file(content=b"belegt"))
+        factories.make_document(file=factories.txt_file(content=b"taken"))
         document = factories.make_document()
         login(client, users["editor"])
         response = client.post(
             f"/documents/{document.pk}/edit/",
-            form_data(file=factories.txt_file(content=b"belegt")),
+            form_data(file=factories.txt_file(content=b"taken")),
         )
         assert response.status_code == 200
         assert "file" in response.context["form"].errors
@@ -250,14 +250,14 @@ class TestEditAndDelete:
         users: dict[str, User],
         django_capture_on_commit_callbacks: DjangoCaptureOnCommitCallbacks,
     ) -> None:
-        document = factories.make_document(title="Weg damit")
+        document = factories.make_document(title="Remove me")
         path = Path(document.file.path)
         login(client, users["admin"])
         confirm = client.get(f"/documents/{document.pk}/delete/")
         assert "deleted permanently" in confirm.content.decode()
         with django_capture_on_commit_callbacks(execute=True):
             response = client.post(f"/documents/{document.pk}/delete/", follow=True)
-        assert "“Weg damit” was deleted" in response.content.decode()
+        assert "“Remove me” was deleted" in response.content.decode()
         assert not Document.objects.exists()
         assert not path.exists()
 
@@ -274,7 +274,7 @@ class TestListAndSearch:
     @pytest.fixture
     def docs(self) -> None:
         factories.make_document(
-            title="Blutbild Protokoll", document_type="lab_protocol", tags=["routine"]
+            title="Blood Count Protocol", document_type="lab_protocol", tags=["routine"]
         )
         factories.make_document(
             title="PCR Protocol",
@@ -282,7 +282,7 @@ class TestListAndSearch:
             language="en",
             tags=["routine", "pcr"],
         )
-        factories.make_document(title="SOP Zentrifuge", tags=["geräte"])
+        factories.make_document(title="SOP Centrifuge", tags=["equipment"])
 
     def _titles(self, client: Client, **params: str) -> list[str]:
         response = client.get("/", params)
@@ -292,11 +292,14 @@ class TestListAndSearch:
     def test_search(self, client: Client, users: dict[str, User], docs: None) -> None:
         login(client, users["reader"])
         assert self._titles(client) == [
-            "Blutbild Protokoll",
+            "Blood Count Protocol",
             "PCR Protocol",
-            "SOP Zentrifuge",
+            "SOP Centrifuge",
         ]
-        assert self._titles(client, q="proto") == ["Blutbild Protokoll", "PCR Protocol"]
+        assert self._titles(client, q="proto") == [
+            "Blood Count Protocol",
+            "PCR Protocol",
+        ]
         assert self._titles(client, document_type="lab_protocol", language="en") == [
             "PCR Protocol"
         ]
@@ -322,30 +325,32 @@ class TestListAndSearch:
         assert list(response.context["documents"]) == []
 
     def test_empty_result(self, client: Client, users: dict[str, User]) -> None:
-        html = login(client, users["reader"]).get("/", {"q": "nix"}).content.decode()
+        html = (
+            login(client, users["reader"]).get("/", {"q": "nothing"}).content.decode()
+        )
         assert "No documents found" in html
 
     def test_pagination_keeps_filters(
         self, client: Client, users: dict[str, User]
     ) -> None:
         for i in range(21):
-            factories.make_document(title=f"Serie {i:02d}")
+            factories.make_document(title=f"Series {i:02d}")
         login(client, users["reader"])
-        first = client.get("/", {"q": "Serie"})
+        first = client.get("/", {"q": "Series"})
         assert len(first.context["documents"]) == 20
-        assert "q=Serie&amp;page=2" in first.content.decode()
-        second = client.get("/", {"q": "Serie", "page": "2"})
+        assert "q=Series&amp;page=2" in first.content.decode()
+        second = client.get("/", {"q": "Series", "page": "2"})
         assert len(second.context["documents"]) == 1
 
     def test_download(self, client: Client, users: dict[str, User]) -> None:
         document = factories.make_document(
-            file=factories.txt_file("bericht.txt", b"Synthetisch")
+            file=factories.txt_file("report.txt", b"Synthetic")
         )
         response = login(client, users["reader"]).get(
             f"/documents/{document.pk}/download/"
         )
         assert response["Content-Disposition"].startswith("attachment")
-        assert b"".join(response.streaming_content) == b"Synthetisch"  # type: ignore[attr-defined]
+        assert b"".join(response.streaming_content) == b"Synthetic"  # type: ignore[attr-defined]
 
     def test_static_css_is_served(self, client: Client) -> None:
         response = client.get("/static/documents/hub.css")

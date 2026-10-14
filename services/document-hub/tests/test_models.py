@@ -10,10 +10,10 @@ from documents.models import Document, DocumentType, Language, Tag, document_upl
 
 def test_upload_path_uses_document_id_not_client_filename() -> None:
     document = Document(id=uuid.UUID("12345678-1234-5678-1234-567812345678"))
-    path = document_upload_to(document, "Mein Befund (final).PDF")
+    path = document_upload_to(document, "My Report (final).PDF")
     assert path.startswith("documents/")
     assert path.endswith("/12345678-1234-5678-1234-567812345678.pdf")
-    assert "Befund" not in path
+    assert "Report" not in path
 
 
 def test_upload_path_without_extension() -> None:
@@ -22,7 +22,7 @@ def test_upload_path_without_extension() -> None:
 
 
 def test_str_representations() -> None:
-    assert str(Tag(name="hämatologie")) == "hämatologie"
+    assert str(Tag(name="ångström")) == "ångström"
     assert str(Document(title="SOP Zentrifuge")) == "SOP Zentrifuge"
 
 
@@ -55,7 +55,7 @@ def test_rename_migration_moves_german_groups_with_members() -> None:
     rename = importlib.import_module("documents.migrations.0004_rename_role_groups")
     Group.objects.filter(name__in=["Reader", "Editor"]).delete()
     old_group = Group.objects.create(name="Leser")
-    user = User.objects.create_user("bestehend")
+    user = User.objects.create_user("existing")
     user.groups.add(old_group)
 
     rename.forwards(apps, None)

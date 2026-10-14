@@ -17,7 +17,7 @@ def _code(exc: pytest.ExceptionInfo[ValidationError]) -> str | None:
 class TestFileSize:
     def test_empty_file_is_rejected(self) -> None:
         with pytest.raises(ValidationError) as exc:
-            v.validate_upload(SimpleUploadedFile("leer.txt", b""))
+            v.validate_upload(SimpleUploadedFile("empty.txt", b""))
         assert _code(exc) == v.FILE_EMPTY
 
     def test_default_limit_is_10_mb(self, settings: Settings) -> None:
@@ -66,7 +66,7 @@ class TestFileType:
         assert detected == v.DetectedFileType(extension, mime)
         assert upload.tell() == 0
 
-    @pytest.mark.parametrize("name", ["bild.png", "programm.exe", "ohne_endung"])
+    @pytest.mark.parametrize("name", ["image.png", "program.exe", "no_extension"])
     def test_disallowed_extensions(self, name: str) -> None:
         with pytest.raises(ValidationError) as exc:
             v.validate_upload(SimpleUploadedFile(name, b"data"))
@@ -93,8 +93,8 @@ class TestTags:
         assert v.normalize_tag("  Klinische   Chemie\t") == "klinische chemie"
 
     def test_normalize_tags_splits_dedupes_and_drops_empty(self) -> None:
-        assert v.normalize_tags("Hämatologie, ,hämatologie,  PCR ") == [
-            "hämatologie",
+        assert v.normalize_tags("Ångström, ,ångström,  PCR ") == [
+            "ångström",
             "pcr",
         ]
         assert v.normalize_tags(["a, b", "c"]) == ["a", "b", "c"]

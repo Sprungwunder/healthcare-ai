@@ -23,7 +23,7 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
   (OpenAPI descriptions), CLI help and output, commit messages, PR titles and
   descriptions.
 - This includes user-facing product text (web UI, validation and API error
-  messages) and synthetic demo data. Only real content data may be in other
+  messages) and synthetic demo and test data. Only real content data may be in other
   languages (e.g. an uploaded German document and its title).
 
 ## Commands

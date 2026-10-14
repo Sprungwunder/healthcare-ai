@@ -56,24 +56,24 @@ class TestCreate:
     def test_creates_document_with_derived_file_metadata(
         self, media_root: Path
     ) -> None:
-        upload = factories.pdf_file("Befund Labor.pdf")
+        upload = factories.pdf_file("Lab Report.pdf")
         document = factories.make_document(
             file=upload,
             title="  Laborprotokoll Blutbild ",
             document_type=DocumentType.LAB_PROTOCOL,
             language=Language.ENGLISH,
-            tags=["Hämatologie", " blutbild ", "hämatologie"],
+            tags=["Ångström", " blood count ", "ångström"],
             published_on=datetime.date(2024, 5, 1),
             source_url="https://example.org/sop",
         )
         document.refresh_from_db()
         assert document.title == "Laborprotokoll Blutbild"
-        assert document.original_filename == "Befund Labor.pdf"
+        assert document.original_filename == "Lab Report.pdf"
         assert document.mime_type == "application/pdf"
         assert document.file_size == upload.size
         assert len(document.checksum_sha256) == 64
         assert document.processing_status == ProcessingStatus.PENDING
-        assert sorted(document.tag_names()) == ["blutbild", "hämatologie"]
+        assert sorted(document.tag_names()) == ["blood count", "ångström"]
         name = document.file.name or ""
         assert name.startswith("documents/")
         assert name.endswith(f"{document.id}.pdf")
@@ -144,19 +144,19 @@ class TestCreate:
 
 class TestUpdate:
     def test_updates_metadata_and_tags(self) -> None:
-        document = factories.make_document(tags=["alt"])
+        document = factories.make_document(tags=["old"])
         services.update_document(
-            document, title=" Neuer Titel ", language=Language.ENGLISH, tags=["Neu"]
+            document, title=" New Title ", language=Language.ENGLISH, tags=["New"]
         )
         document.refresh_from_db()
-        assert document.title == "Neuer Titel"
+        assert document.title == "New Title"
         assert document.language == Language.ENGLISH
-        assert document.tag_names() == ["neu"]
+        assert document.tag_names() == ["new"]
 
     def test_tags_unchanged_when_not_given(self) -> None:
-        document = factories.make_document(tags=["bleibt"])
-        services.update_document(document, source="Andere Quelle")
-        assert document.tag_names() == ["bleibt"]
+        document = factories.make_document(tags=["stays"])
+        services.update_document(document, source="Other Source")
+        assert document.tag_names() == ["stays"]
 
     def test_unknown_field_is_a_programming_error(self) -> None:
         document = factories.make_document()
@@ -176,12 +176,12 @@ class TestUpdate:
         rec = recorder(signals.document_updated)
 
         with django_capture_on_commit_callbacks(execute=True):
-            services.update_document(document, file=factories.docx_file("neu.docx"))
+            services.update_document(document, file=factories.docx_file("new.docx"))
 
         document.refresh_from_db()
         assert not old_path.exists()
         assert Path(document.file.path).exists()
-        assert document.original_filename == "neu.docx"
+        assert document.original_filename == "new.docx"
         assert document.mime_type.endswith("wordprocessingml.document")
         assert document.processing_status == ProcessingStatus.PENDING
         assert rec.calls[0]["file_replaced"] is True
@@ -196,7 +196,7 @@ class TestUpdate:
         with django_capture_on_commit_callbacks(execute=True):
             services.update_document(document, file=factories.txt_file("v2.txt"))
         document.refresh_from_db()
-        assert Path(document.file.path).read_bytes().startswith(b"Synthetisch")
+        assert Path(document.file.path).read_bytes().startswith(b"Synthetic")
         assert len(_stored_files(media_root)) == 1
 
     def test_replacing_with_duplicate_of_other_document_fails(self) -> None:
@@ -272,4 +272,4 @@ class TestDelete:
         ):
             services.delete_document(document)
         assert "Could not delete" in caplog.text
-        assert "Synthetisch" not in caplog.text
+        assert "Synthetic" not in caplog.text

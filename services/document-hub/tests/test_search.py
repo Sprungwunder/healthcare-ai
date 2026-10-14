@@ -16,10 +16,10 @@ pytestmark = pytest.mark.django_db
 def corpus() -> dict[str, Document]:
     return {
         "blood": factories.make_document(
-            title="Laborprotokoll Blutbild",
+            title="Blood Count Lab Report",
             document_type=DocumentType.LAB_PROTOCOL,
             language=Language.GERMAN,
-            tags=["hämatologie", "routine"],
+            tags=["hematology", "routine"],
         ),
         "pcr": factories.make_document(
             title="PCR Protocol SARS-CoV-2",
@@ -28,10 +28,10 @@ def corpus() -> dict[str, Document]:
             tags=["pcr", "routine"],
         ),
         "sop": factories.make_document(
-            title="SOP Zentrifuge",
+            title="SOP Centrifuge",
             document_type=DocumentType.SOP,
             language=Language.GERMAN,
-            tags=["geräte"],
+            tags=["equipment"],
         ),
         "manual": factories.make_document(
             title="Analyzer Technical Manual",
@@ -55,30 +55,30 @@ def test_no_filter_returns_all(corpus: dict[str, Document]) -> None:
 
 
 def test_title_contains_case_insensitive(corpus: dict[str, Document]) -> None:
-    assert _search(q="protokoll") == {"Laborprotokoll Blutbild"}
+    assert _search(q="report") == {"Blood Count Lab Report"}
     assert _search(q="PROTOCOL") == {"PCR Protocol SARS-CoV-2"}
-    assert _search(q="  zentri ") == {"SOP Zentrifuge"}
+    assert _search(q="  centri ") == {"SOP Centrifuge"}
 
 
 def test_filter_by_type(corpus: dict[str, Document]) -> None:
     assert _search(document_type="lab_protocol") == {
-        "Laborprotokoll Blutbild",
+        "Blood Count Lab Report",
         "PCR Protocol SARS-CoV-2",
     }
 
 
 def test_filter_by_language(corpus: dict[str, Document]) -> None:
-    assert _search(language="de") == {"Laborprotokoll Blutbild", "SOP Zentrifuge"}
+    assert _search(language="de") == {"Blood Count Lab Report", "SOP Centrifuge"}
 
 
 def test_tags_require_all(corpus: dict[str, Document]) -> None:
     assert _search(tags="routine") == {
-        "Laborprotokoll Blutbild",
+        "Blood Count Lab Report",
         "PCR Protocol SARS-CoV-2",
     }
     assert _search(tags="Routine, PCR") == {"PCR Protocol SARS-CoV-2"}
-    assert _search(tags="pcr,geräte") == set()
-    assert _search(tags="unbekannt") == set()
+    assert _search(tags="pcr,equipment") == set()
+    assert _search(tags="unknown") == set()
 
 
 def test_combined_filters(corpus: dict[str, Document]) -> None:
@@ -97,7 +97,7 @@ def test_ordering(corpus: dict[str, Document]) -> None:
 
 
 def test_results_are_distinct(corpus: dict[str, Document]) -> None:
-    query = search.parse_search_params({"tags": "routine,hämatologie"})
+    query = search.parse_search_params({"tags": "routine,hematology"})
     assert search.search_documents(query).count() == 1
 
 
@@ -134,6 +134,6 @@ class StubBackend:
 
 def test_backend_is_configurable(settings: Settings) -> None:
     settings.DOCUMENT_HUB_SEARCH_BACKEND = "tests.test_search.StubBackend"
-    query = search.SearchQuery(text="egal")
+    query = search.SearchQuery(text="anything")
     assert list(search.search_documents(query)) == []
     assert StubBackend.last_query == query

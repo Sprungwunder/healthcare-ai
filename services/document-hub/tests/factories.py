@@ -14,23 +14,23 @@ from documents.models import Document, DocumentType, Language
 _counter = itertools.count(1)
 
 
-def unique_text(prefix: str = "Synthetisches Testdokument") -> bytes:
+def unique_text(prefix: str = "Synthetic test document") -> bytes:
     return f"{prefix} #{next(_counter)}\n".encode()
 
 
 def txt_file(
-    name: str = "notiz.txt", content: bytes | None = None
+    name: str = "note.txt", content: bytes | None = None
 ) -> SimpleUploadedFile:
     return SimpleUploadedFile(name, content or unique_text(), "text/plain")
 
 
-def md_file(name: str = "notiz.md", content: bytes | None = None) -> SimpleUploadedFile:
+def md_file(name: str = "note.md", content: bytes | None = None) -> SimpleUploadedFile:
     return SimpleUploadedFile(
-        name, content or b"# Titel\n\n" + unique_text(), "text/markdown"
+        name, content or b"# Title\n\n" + unique_text(), "text/markdown"
     )
 
 
-def pdf_file(name: str = "protokoll.pdf") -> SimpleUploadedFile:
+def pdf_file(name: str = "protocol.pdf") -> SimpleUploadedFile:
     body = b"%PDF-1.4\n% synthetic\n" + unique_text() + b"%%EOF\n"
     return SimpleUploadedFile(name, body, "application/pdf")
 
@@ -47,16 +47,16 @@ def docx_bytes(include_document_xml: bool = True) -> bytes:
     return buffer.getvalue()
 
 
-def docx_file(name: str = "handbuch.docx") -> SimpleUploadedFile:
+def docx_file(name: str = "manual.docx") -> SimpleUploadedFile:
     return SimpleUploadedFile(name, docx_bytes(), "application/octet-stream")
 
 
 def make_document(**overrides: Any) -> Document:
     data: dict[str, Any] = {
         "file": txt_file(),
-        "title": f"Testdokument {next(_counter)}",
+        "title": f"Test document {next(_counter)}",
         "document_type": DocumentType.SOP,
-        "source": "Synthetisches Labor",
+        "source": "Synthetic Lab",
         "language": Language.GERMAN,
         "tags": [],
     }

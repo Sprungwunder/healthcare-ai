@@ -31,11 +31,11 @@ def client_for(user: User | None) -> APIClient:
 
 def upload_payload(**overrides: Any) -> dict[str, Any]:
     data: dict[str, Any] = {
-        "title": "SOP Probenannahme",
+        "title": "SOP Sample Reception",
         "document_type": "sop",
-        "source": "Synthetisches Labor",
+        "source": "Synthetic Lab",
         "language": "de",
-        "tags": "Präanalytik, Proben",
+        "tags": "Preanalytics, Samples",
         "file": factories.pdf_file(),
     }
     data.update(overrides)
@@ -91,7 +91,7 @@ class TestPermissionMatrix:
     def test_update(self, role: str, expected: int, users: dict[str, User]) -> None:
         document = factories.make_document()
         response = self._client(role, users).patch(
-            detail_url(document), {"title": "Neu"}, format="json"
+            detail_url(document), {"title": "New"}, format="json"
         )
         assert response.status_code == expected
 
@@ -122,7 +122,7 @@ class TestCrud:
         )
         assert response.status_code == 201, response.json()
         body = response.json()
-        assert sorted(body["tags"]) == ["proben", "präanalytik"]
+        assert sorted(body["tags"]) == ["preanalytics", "samples"]
         assert body["mime_type"] == "application/pdf"
         assert body["processing_status"] == "pending"
         assert body["created_by"] == "editor"
@@ -132,35 +132,35 @@ class TestCrud:
         assert "file" not in body
 
         detail = client.get(f"{LIST_URL}{body['id']}/").json()
-        assert detail["title"] == "SOP Probenannahme"
+        assert detail["title"] == "SOP Sample Reception"
         assert detail["published_on"] == "2024-03-01"
 
     def test_tags_as_repeated_multipart_fields(self, users: dict[str, User]) -> None:
         response = client_for(users["editor"]).post(
-            LIST_URL, upload_payload(tags=["Eins", "zwei, drei"])
+            LIST_URL, upload_payload(tags=["One", "two, three"])
         )
-        assert sorted(response.json()["tags"]) == ["drei", "eins", "zwei"]
+        assert sorted(response.json()["tags"]) == ["one", "three", "two"]
 
     def test_patch_metadata_and_tags_via_json(self, users: dict[str, User]) -> None:
         document = factories.make_document(tags=["alt"])
         response = client_for(users["editor"]).patch(
             detail_url(document),
-            {"title": "Aktualisiert", "tags": ["neu", "Zweiter"]},
+            {"title": "Updated", "tags": ["new", "Second"]},
             format="json",
         )
         assert response.status_code == 200
-        assert response.json()["title"] == "Aktualisiert"
-        assert sorted(response.json()["tags"]) == ["neu", "zweiter"]
+        assert response.json()["title"] == "Updated"
+        assert sorted(response.json()["tags"]) == ["new", "second"]
 
     def test_patch_replaces_file(self, users: dict[str, User]) -> None:
         document = factories.make_document()
         old_checksum = document.checksum_sha256
         response = client_for(users["editor"]).patch(
-            detail_url(document), {"file": factories.md_file("neu.md")}
+            detail_url(document), {"file": factories.md_file("new.md")}
         )
         assert response.status_code == 200
         body = response.json()
-        assert body["original_filename"] == "neu.md"
+        assert body["original_filename"] == "new.md"
         assert body["mime_type"] == "text/markdown"
         assert body["checksum_sha256"] != old_checksum
 
@@ -169,9 +169,9 @@ class TestCrud:
         response = client_for(users["editor"]).put(
             detail_url(document),
             {
-                "title": "Komplett",
+                "title": "Complete",
                 "document_type": "guideline",
-                "source": "Fachgesellschaft",
+                "source": "Professional Society",
                 "language": "en",
             },
             format="json",
@@ -197,15 +197,15 @@ class TestCrud:
     def test_download_returns_file_with_original_name(
         self, users: dict[str, User]
     ) -> None:
-        upload = factories.txt_file("Prüfprotokoll Gerät.txt", b"Synthetischer Inhalt")
+        upload = factories.txt_file("Résumé Device.txt", b"Synthetic content")
         document = factories.make_document(file=upload)
         response = client_for(users["reader"]).get(f"{detail_url(document)}download/")
         assert response.status_code == 200
         assert response["Content-Type"] == "text/plain"
         assert "attachment" in response["Content-Disposition"]
-        assert "Pr%C3%BCfprotokoll" in response["Content-Disposition"]
+        assert "R%C3%A9sum%C3%A9" in response["Content-Disposition"]
         assert response["Cache-Control"] == "private, no-store"
-        assert b"".join(response.streaming_content) == b"Synthetischer Inhalt"  # type: ignore[attr-defined]
+        assert b"".join(response.streaming_content) == b"Synthetic content"  # type: ignore[attr-defined]
 
     def test_download_missing_file_is_404(self, users: dict[str, User]) -> None:
         document = factories.make_document()
@@ -217,11 +217,11 @@ class TestCrud:
 
 class TestSearchAndPagination:
     def test_filters(self, users: dict[str, User]) -> None:
-        factories.make_document(title="Blutbild", document_type="lab_protocol",
-                                tags=["hämatologie", "routine"])  # fmt: skip
+        factories.make_document(title="Blood Count", document_type="lab_protocol",
+                                tags=["hematology", "routine"])  # fmt: skip
         factories.make_document(title="PCR", document_type="lab_protocol",
                                 language="en", tags=["routine"])  # fmt: skip
-        factories.make_document(title="Zentrifuge SOP", tags=["geräte"])
+        factories.make_document(title="Centrifuge SOP", tags=["equipment"])
         client = client_for(users["reader"])
 
         def titles(**params: str) -> list[str]:
@@ -229,12 +229,12 @@ class TestSearchAndPagination:
             assert response.status_code == 200
             return sorted(d["title"] for d in response.json()["results"])
 
-        assert titles(q="blut") == ["Blutbild"]
-        assert titles(document_type="lab_protocol") == ["Blutbild", "PCR"]
-        assert titles(tags="routine,Hämatologie") == ["Blutbild"]
+        assert titles(q="blood") == ["Blood Count"]
+        assert titles(document_type="lab_protocol") == ["Blood Count", "PCR"]
+        assert titles(tags="routine,Hematology") == ["Blood Count"]
         assert titles(language="en") == ["PCR"]
-        assert titles(document_type="lab_protocol", language="de") == ["Blutbild"]
-        assert titles(ordering="title") == ["Blutbild", "PCR", "Zentrifuge SOP"]
+        assert titles(document_type="lab_protocol", language="de") == ["Blood Count"]
+        assert titles(ordering="title") == ["Blood Count", "Centrifuge SOP", "PCR"]
 
     def test_invalid_filter_is_validation_error(self, users: dict[str, User]) -> None:
         response = client_for(users["reader"]).get(LIST_URL, {"document_type": "memo"})
@@ -255,12 +255,12 @@ class TestSearchAndPagination:
         assert client.get(LIST_URL, {"page": 9}).status_code == 404
 
     def test_tag_search(self, users: dict[str, User]) -> None:
-        for name in ["hämatologie", "hämostaseologie", "pcr"]:
+        for name in ["hematology", "hemostasis", "pcr"]:
             Tag.objects.create(name=name)
-        response = client_for(users["reader"]).get("/api/v1/tags/", {"q": "häm"})
+        response = client_for(users["reader"]).get("/api/v1/tags/", {"q": "hem"})
         assert [t["name"] for t in response.json()["results"]] == [
-            "hämatologie",
-            "hämostaseologie",
+            "hematology",
+            "hemostasis",
         ]
 
 
@@ -286,7 +286,7 @@ class TestErrors:
 
     def test_empty_file(self, users: dict[str, User]) -> None:
         response = client_for(users["editor"]).post(
-            LIST_URL, upload_payload(file=SimpleUploadedFile("leer.txt", b""))
+            LIST_URL, upload_payload(file=SimpleUploadedFile("empty.txt", b""))
         )
         assert response.status_code == 400
         assert "file" in error(response)["details"]
@@ -303,8 +303,8 @@ class TestErrors:
     @pytest.mark.parametrize(
         "upload",
         [
-            SimpleUploadedFile("bild.png", b"\x89PNG\r\n"),
-            SimpleUploadedFile("tarnung.pdf", b"MZ\x90 executable"),
+            SimpleUploadedFile("image.png", b"\x89PNG\r\n"),
+            SimpleUploadedFile("disguised.pdf", b"MZ\x90 executable"),
         ],
     )
     def test_unsupported_or_forged_type_is_415(
