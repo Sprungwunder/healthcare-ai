@@ -11,7 +11,6 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.request import Request
-from rest_framework.serializers import BaseSerializer
 
 from documents import search, services
 from documents.api.serializers import DocumentSerializer, TagSerializer
@@ -48,12 +47,6 @@ class DocumentViewSet(viewsets.ModelViewSet[Document]):
 
     def perform_destroy(self, instance: Document) -> None:
         services.delete_document(instance)
-
-    def perform_update(self, serializer: BaseSerializer[Document]) -> None:
-        document = serializer.save()
-        # Drop the stale prefetch so the response shows the new tags.
-        if hasattr(document, "_prefetched_objects_cache"):
-            document._prefetched_objects_cache = {}
 
     @extend_schema(
         responses={
