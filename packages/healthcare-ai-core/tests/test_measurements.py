@@ -4,18 +4,26 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
+import healthcare_ai
 from healthcare_ai.measurements import (
     ABSOLUTE_ZERO_CELSIUS,
     DEFAULT_BODY_TEMP_MAX_CELSIUS,
     DEFAULT_BODY_TEMP_MIN_CELSIUS,
+    DEFAULT_GLUCOSE_MAX_MMOL_PER_L,
+    DEFAULT_GLUCOSE_MIN_MMOL_PER_L,
+    GLUCOSE_MG_PER_DL_PER_MMOL_PER_L,
+    GlucoseUnit,
     InvalidValueError,
     Measurement,
     MeasurementValidationError,
     PhysiologicalRangeError,
     TemperatureUnit,
     UnknownUnitError,
+    create_glucose_measurement,
     create_temperature_measurement,
+    normalize_glucose,
     normalize_temperature,
+    validate_glucose,
     validate_temperature,
 )
 
@@ -211,3 +219,201 @@ class TestMeasurementObjectCreation:
 
         with pytest.raises(UnknownUnitError):
             create_temperature_measurement(37.0, "Kelvin")
+
+
+class TestGlucoseUnitParsing:
+    """Tests for glucose unit parsing."""
+
+    @pytest.mark.parametrize(
+        "unit_input,expected",
+        [
+            ("mmol/L", GlucoseUnit.MMOL_PER_L),
+            ("mmol/l", GlucoseUnit.MMOL_PER_L),
+            ("MMOL/L", GlucoseUnit.MMOL_PER_L),
+            ("mmol/liter", GlucoseUnit.MMOL_PER_L),
+            ("mmol/litre", GlucoseUnit.MMOL_PER_L),
+            ("  mmol/L  ", GlucoseUnit.MMOL_PER_L),
+            ("mg/dL", GlucoseUnit.MG_PER_DL),
+            ("mg/dl", GlucoseUnit.MG_PER_DL),
+            ("MG/DL", GlucoseUnit.MG_PER_DL),
+            ("mg%", GlucoseUnit.MG_PER_DL),
+            ("mg/100ml", GlucoseUnit.MG_PER_DL),
+            ("mg/100 mL", GlucoseUnit.MG_PER_DL),
+            ("  mg/dL  ", GlucoseUnit.MG_PER_DL),
+        ],
+    )
+    def test_valid_unit_parsing(self, unit_input: str, expected: GlucoseUnit) -> None:
+        assert GlucoseUnit.from_str(unit_input) == expected
+
+    @pytest.mark.parametrize(
+        "invalid_unit",
+        ["°C", "g/L", "mmol", "mg", "unknown", " ", ""],
+    )
+    def test_unknown_unit_raises_error(self, invalid_unit: str) -> None:
+        with pytest.raises(UnknownUnitError) as exc_info:
+            GlucoseUnit.from_str(invalid_unit)
+        assert invalid_unit.strip() in str(exc_info.value) or "empty" in str(
+            exc_info.value
+        )
+
+    def test_non_string_unit_parsing_raises_error(self) -> None:
+        with pytest.raises(InvalidValueError):
+            GlucoseUnit.from_str(5.5)  # type: ignore[arg-type]
+
+
+class TestGlucoseNormalization:
+    """Tests for normalizing glucose values to mmol/L."""
+
+    def test_conversion_factor_matches_glucose_molar_mass(self) -> None:
+        # 180.16 g/mol -> 1 mmol/L == 18.016 mg/dL
+        assert GLUCOSE_MG_PER_DL_PER_MMOL_PER_L == pytest.approx(18.016)
+
+    @pytest.mark.parametrize(
+        "val,unit,expected_mmol",
+        [
+            (0.0, GlucoseUnit.MMOL_PER_L, 0.0),
+            (5.5, GlucoseUnit.MMOL_PER_L, 5.5),
+            (7, "mmol/L", 7.0),
+            (18.016, GlucoseUnit.MG_PER_DL, 1.0),
+            (90.08, "mg/dL", 5.0),
+            (100, "mg/dl", 5.5506),
+            (126.0, "mg%", 6.9938),
+        ],
+    )
+    def test_normalize_valid_glucose(
+        self, val: float | int, unit: GlucoseUnit | str, expected_mmol: float
+    ) -> None:
+        assert normalize_glucose(val, unit) == pytest.approx(expected_mmol, abs=1e-4)
+
+    @pytest.mark.parametrize("unit", [GlucoseUnit.MMOL_PER_L, GlucoseUnit.MG_PER_DL])
+    def test_negative_concentration_raises_error(self, unit: GlucoseUnit) -> None:
+        with pytest.raises(InvalidValueError, match="cannot be negative"):
+            normalize_glucose(-0.1, unit)
+
+    @pytest.mark.parametrize("invalid_val", [float("nan"), float("inf"), float("-inf")])
+    def test_non_finite_values_raise_error(self, invalid_val: float) -> None:
+        with pytest.raises(InvalidValueError, match="must be finite"):
+            normalize_glucose(invalid_val, GlucoseUnit.MMOL_PER_L)
+
+    @pytest.mark.parametrize(
+        "invalid_type_val",
+        ["5.5", None, True, False, [5.5], {"val": 5.5}],
+    )
+    def test_invalid_types_raise_type_error(self, invalid_type_val: object) -> None:
+        with pytest.raises(TypeError, match="must be numeric"):
+            normalize_glucose(
+                invalid_type_val,  # type: ignore[arg-type]
+                GlucoseUnit.MMOL_PER_L,
+            )
+
+    def test_unknown_unit_raises_error(self) -> None:
+        with pytest.raises(UnknownUnitError):
+            normalize_glucose(5.5, "g/L")
+
+
+class TestGlucoseValidation:
+    """Tests for physiological glucose validation."""
+
+    @pytest.mark.parametrize(
+        "val,unit,expected_mmol",
+        [
+            (5.5, GlucoseUnit.MMOL_PER_L, 5.5),
+            (2.8, "mmol/L", 2.8),  # hypoglycemia
+            (40.0, "mmol/l", 40.0),  # hyperosmolar crisis
+            (0.5, GlucoseUnit.MMOL_PER_L, DEFAULT_GLUCOSE_MIN_MMOL_PER_L),
+            (55.0, GlucoseUnit.MMOL_PER_L, DEFAULT_GLUCOSE_MAX_MMOL_PER_L),
+            (90.08, "mg/dL", 5.0),
+            (990.0, "mg/dL", 54.9512),
+        ],
+    )
+    def test_valid_physiological_glucose(
+        self, val: float | int, unit: GlucoseUnit | str, expected_mmol: float
+    ) -> None:
+        assert validate_glucose(val, unit) == pytest.approx(expected_mmol, abs=1e-4)
+
+    @pytest.mark.parametrize(
+        "val,unit",
+        [
+            (0.0, GlucoseUnit.MMOL_PER_L),
+            (0.49, GlucoseUnit.MMOL_PER_L),
+            (55.1, "mmol/L"),
+            (9.0, "mg/dL"),  # ~0.4996 mmol/L
+            (1000.0, "mg/dL"),  # ~55.51 mmol/L
+        ],
+    )
+    def test_out_of_bounds_glucose_raises_range_error(
+        self, val: float, unit: GlucoseUnit | str
+    ) -> None:
+        with pytest.raises(
+            PhysiologicalRangeError, match="outside plausible physiological bounds"
+        ):
+            validate_glucose(val, unit)
+
+    @pytest.mark.parametrize(
+        "val,declared_unit",
+        [
+            (100.0, "mmol/L"),  # really 100 mg/dL
+            (5.5, "mg/dL"),  # really 5.5 mmol/L
+        ],
+    )
+    def test_swapped_units_are_caught(self, val: float, declared_unit: str) -> None:
+        with pytest.raises(PhysiologicalRangeError):
+            validate_glucose(val, declared_unit)
+
+    def test_default_unit_is_mmol_per_l(self) -> None:
+        assert validate_glucose(5.5) == 5.5
+
+    def test_custom_physiological_bounds(self) -> None:
+        assert validate_glucose(3.5, "mmol/L", min_mmol=3.0, max_mmol=10.0) == 3.5
+
+        with pytest.raises(PhysiologicalRangeError):
+            validate_glucose(3.5, "mmol/L", min_mmol=3.9, max_mmol=10.0)
+
+    def test_invalid_bound_configuration_raises_error(self) -> None:
+        with pytest.raises(ValueError, match="cannot be greater than max_mmol"):
+            validate_glucose(5.5, "mmol/L", min_mmol=10.0, max_mmol=3.0)
+
+
+class TestGlucoseMeasurementCreation:
+    """Tests for packaging glucose readings into Measurement objects."""
+
+    def test_create_measurement_mmol_per_l(self) -> None:
+        measurement = create_glucose_measurement(5.5, "mmol/L")
+        assert isinstance(measurement, Measurement)
+        assert measurement.value == 5.5
+        assert measurement.unit == "mmol/L"
+        assert measurement.measurement_type == "glucose"
+        assert measurement.raw_value == 5.5
+        assert measurement.raw_unit == "mmol/L"
+
+    def test_create_measurement_mg_per_dl(self) -> None:
+        measurement = create_glucose_measurement(90.08, GlucoseUnit.MG_PER_DL)
+        assert measurement.value == pytest.approx(5.0, abs=1e-4)
+        assert measurement.unit == "mmol/L"
+        assert measurement.measurement_type == "glucose"
+        assert measurement.raw_value == 90.08
+        assert measurement.raw_unit == "mg/dL"
+
+    def test_create_measurement_fail_fast_on_invalid_input(self) -> None:
+        with pytest.raises(PhysiologicalRangeError):
+            create_glucose_measurement(100.0, "mmol/L")
+
+        with pytest.raises(UnknownUnitError):
+            create_glucose_measurement(5.5, "°C")
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "DEFAULT_GLUCOSE_MAX_MMOL_PER_L",
+        "DEFAULT_GLUCOSE_MIN_MMOL_PER_L",
+        "GLUCOSE_MG_PER_DL_PER_MMOL_PER_L",
+        "GlucoseUnit",
+        "create_glucose_measurement",
+        "normalize_glucose",
+        "validate_glucose",
+    ],
+)
+def test_glucose_api_is_exported_from_package(name: str) -> None:
+    assert name in healthcare_ai.__all__
+    assert hasattr(healthcare_ai, name)
