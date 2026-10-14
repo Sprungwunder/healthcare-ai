@@ -19,6 +19,15 @@ ABSOLUTE_ZERO_CELSIUS: Final[float] = -273.15
 DEFAULT_BODY_TEMP_MIN_CELSIUS: Final[float] = 25.0
 DEFAULT_BODY_TEMP_MAX_CELSIUS: Final[float] = 45.0
 
+# mg/dL of glucose per mmol/L, derived from its molar mass (180.16 g/mol)
+GLUCOSE_MG_PER_DL_PER_MMOL_PER_L: Final[float] = 18.016
+
+# Default plausible bounds for blood glucose in mmol/L (~9 to ~990 mg/dL).
+# Wide enough for severe hypoglycemia and hyperosmolar crises, narrow enough
+# to catch readings recorded with the wrong unit.
+DEFAULT_GLUCOSE_MIN_MMOL_PER_L: Final[float] = 0.5
+DEFAULT_GLUCOSE_MAX_MMOL_PER_L: Final[float] = 55.0
+
 
 class MeasurementValidationError(ValueError):
     """Base exception for all measurement validation and normalization errors."""
@@ -98,14 +107,71 @@ class TemperatureUnit(str, Enum):
         )
 
 
+class GlucoseUnit(str, Enum):
+    """Supported blood glucose concentration units."""
+
+    MMOL_PER_L = "mmol/L"
+    MG_PER_DL = "mg/dL"
+
+    @classmethod
+    def from_str(cls, unit_str: str) -> GlucoseUnit:
+        """Parse a unit string into a standardized GlucoseUnit.
+
+        Supports case-insensitive matching and common aliases.
+
+        Args:
+            unit_str: String representation of the unit
+                (e.g. "mmol/l", "mg/dL", "mg%").
+
+        Returns:
+            The corresponding GlucoseUnit enum member.
+
+        Raises:
+            UnknownUnitError: If unit_str cannot be mapped to a known unit.
+            InvalidValueError: If unit_str is not a string.
+        """
+        if not isinstance(unit_str, str):
+            raise InvalidValueError(
+                f"Unit must be a string or GlucoseUnit, got {type(unit_str).__name__}"
+            )
+
+        cleaned = unit_str.strip().lower()
+        if not cleaned:
+            raise UnknownUnitError("Unit string cannot be empty.")
+
+        mmol_per_l_synonyms = {
+            "mmol/l",
+            "mmol/liter",
+            "mmol/litre",
+        }
+        mg_per_dl_synonyms = {
+            "mg/dl",
+            "mg%",
+            "mg/100ml",
+            "mg/100 ml",
+        }
+
+        if cleaned in mmol_per_l_synonyms:
+            return cls.MMOL_PER_L
+        if cleaned in mg_per_dl_synonyms:
+            return cls.MG_PER_DL
+
+        supported_list = ", ".join(sorted(mmol_per_l_synonyms | mg_per_dl_synonyms))
+        raise UnknownUnitError(
+            f"Unknown or unsupported glucose unit: '{unit_str}'. "
+            f"Supported units: {supported_list}"
+        )
+
+
 @dataclass(frozen=True)
 class Measurement:
     """Represents a validated and normalized medical measurement.
 
     Attributes:
         value: The numerical value in standard SI / target clinical units.
-        unit: Standardized unit string (e.g. '°C').
-        measurement_type: Category of the measurement (e.g. 'temperature').
+        unit: Standardized unit string (e.g. '°C', 'mmol/L').
+        measurement_type: Category of the measurement (e.g. 'temperature',
+            'glucose').
         raw_value: The original value before normalization.
         raw_unit: The original unit before normalization.
     """
@@ -115,6 +181,20 @@ class Measurement:
     measurement_type: str = "temperature"
     raw_value: float | None = None
     raw_unit: str | None = None
+
+
+def _to_finite_float(value: float | int) -> float:
+    """Return value as float, rejecting non-numeric and non-finite input."""
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(
+            f"Measurement value must be numeric (int or float), got "
+            f"{type(value).__name__}: {value!r}"
+        )
+
+    val = float(value)
+    if math.isnan(val) or math.isinf(val):
+        raise InvalidValueError(f"Measurement value must be finite, got {val}")
+    return val
 
 
 def normalize_temperature(
@@ -135,15 +215,7 @@ def normalize_temperature(
         InvalidValueError: If value is NaN, infinite, or below absolute zero.
         UnknownUnitError: If unit is unrecognized.
     """
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
-        raise TypeError(
-            f"Measurement value must be numeric (int or float), got "
-            f"{type(value).__name__}: {value!r}"
-        )
-
-    val = float(value)
-    if math.isnan(val) or math.isinf(val):
-        raise InvalidValueError(f"Measurement value must be finite, got {val}")
+    val = _to_finite_float(value)
 
     if isinstance(unit, TemperatureUnit):
         parsed_unit = unit
@@ -243,5 +315,121 @@ def create_temperature_measurement(
         unit=TemperatureUnit.CELSIUS.value,
         measurement_type="temperature",
         raw_value=raw_num,
+        raw_unit=raw_unit_str,
+    )
+
+
+def normalize_glucose(
+    value: float | int,
+    unit: GlucoseUnit | str,
+) -> float:
+    """Convert a blood glucose concentration to SI units (mmol/L).
+
+    Args:
+        value: Numeric glucose concentration.
+        unit: Unit of the value (mmol/L or mg/dL).
+
+    Returns:
+        Glucose concentration in mmol/L as float.
+
+    Raises:
+        TypeError: If value is not a real number (int or float, not bool).
+        InvalidValueError: If value is NaN, infinite, or negative.
+        UnknownUnitError: If unit is unrecognized.
+    """
+    val = _to_finite_float(value)
+
+    if isinstance(unit, GlucoseUnit):
+        parsed_unit = unit
+    else:
+        parsed_unit = GlucoseUnit.from_str(unit)
+
+    if val < 0:
+        raise InvalidValueError(
+            f"Glucose concentration cannot be negative, got {val} {parsed_unit.value}."
+        )
+
+    if parsed_unit == GlucoseUnit.MMOL_PER_L:
+        return val
+    if parsed_unit == GlucoseUnit.MG_PER_DL:
+        return val / GLUCOSE_MG_PER_DL_PER_MMOL_PER_L
+    raise UnknownUnitError(f"Unsupported unit: {parsed_unit}")  # pragma: no cover
+
+
+def validate_glucose(
+    value: float | int,
+    unit: GlucoseUnit | str = GlucoseUnit.MMOL_PER_L,
+    *,
+    min_mmol: float = DEFAULT_GLUCOSE_MIN_MMOL_PER_L,
+    max_mmol: float = DEFAULT_GLUCOSE_MAX_MMOL_PER_L,
+) -> float:
+    """Validate that a blood glucose reading lies within plausible bounds.
+
+    Converts to mmol/L first if necessary, then checks against bounds. The
+    default bounds also catch most mmol/L vs. mg/dL mix-ups.
+
+    Args:
+        value: Numeric glucose reading.
+        unit: Unit of the input reading (defaults to mmol/L).
+        min_mmol: Lower plausible bound in mmol/L (default: 0.5 mmol/L).
+        max_mmol: Upper plausible bound in mmol/L (default: 55.0 mmol/L).
+
+    Returns:
+        The validated glucose concentration in mmol/L.
+
+    Raises:
+        TypeError: If value is non-numeric.
+        InvalidValueError: If value is non-finite or negative.
+        UnknownUnitError: If unit is not recognized.
+        PhysiologicalRangeError: If the normalized value is out of bounds.
+    """
+    if min_mmol > max_mmol:
+        raise ValueError(
+            f"min_mmol ({min_mmol}) cannot be greater than max_mmol ({max_mmol})"
+        )
+
+    mmol_val = normalize_glucose(value, unit)
+
+    if mmol_val < min_mmol or mmol_val > max_mmol:
+        input_unit_str = unit.value if isinstance(unit, GlucoseUnit) else str(unit)
+        raise PhysiologicalRangeError(
+            f"Glucose {value} {input_unit_str} ({mmol_val:.2f} mmol/L) is outside "
+            f"plausible physiological bounds "
+            f"[{min_mmol:.1f} mmol/L, {max_mmol:.1f} mmol/L]."
+        )
+
+    return mmol_val
+
+
+def create_glucose_measurement(
+    value: float | int,
+    unit: GlucoseUnit | str,
+    *,
+    min_mmol: float = DEFAULT_GLUCOSE_MIN_MMOL_PER_L,
+    max_mmol: float = DEFAULT_GLUCOSE_MAX_MMOL_PER_L,
+) -> Measurement:
+    """Validate and package a blood glucose reading into a Measurement.
+
+    Args:
+        value: Raw glucose value.
+        unit: Raw glucose unit.
+        min_mmol: Lower plausible bound in mmol/L.
+        max_mmol: Upper plausible bound in mmol/L.
+
+    Returns:
+        A validated Measurement instance normalized to mmol/L.
+    """
+    validated_mmol = validate_glucose(
+        value,
+        unit,
+        min_mmol=min_mmol,
+        max_mmol=max_mmol,
+    )
+    raw_unit_str = unit.value if isinstance(unit, GlucoseUnit) else str(unit)
+    return Measurement(
+        value=validated_mmol,
+        unit=GlucoseUnit.MMOL_PER_L.value,
+        measurement_type="glucose",
+        raw_value=float(value),
         raw_unit=raw_unit_str,
     )
