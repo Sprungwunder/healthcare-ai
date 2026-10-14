@@ -9,7 +9,11 @@ import os
 from pathlib import Path
 
 import dj_database_url
+import django_stubs_ext
 from django.core.exceptions import ImproperlyConfigured
+
+# Lets generic classes be subscripted at runtime (e.g. `ListView[Document]`).
+django_stubs_ext.monkeypatch()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 

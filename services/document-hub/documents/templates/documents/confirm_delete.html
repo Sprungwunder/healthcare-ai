@@ -1,0 +1,13 @@
+{% extends "documents/base.html" %}
+{% block title %}Löschen{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>Dokument löschen?</h1>
+  <p>„<strong>{{ document.title }}</strong>“ und die Datei <em>{{ document.original_filename }}</em> werden endgültig gelöscht. Das lässt sich nicht rückgängig machen.</p>
+  <form method="post" class="form-actions">
+    {% csrf_token %}
+    <button type="submit" class="button danger">Endgültig löschen</button>
+    <a class="button" href="{{ document.get_absolute_url }}">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}
