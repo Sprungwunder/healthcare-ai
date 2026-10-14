@@ -23,8 +23,8 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
   (OpenAPI descriptions), CLI help and output, commit messages, PR titles and
   descriptions.
 - This includes user-facing product text (web UI, validation and API error
-  messages). Only content data may be in other languages (e.g. a document's
-  title or synthetic demo documents with `language="de"`).
+  messages) and synthetic demo data. Only real content data may be in other
+  languages (e.g. an uploaded German document and its title).
 
 ## Commands
 Setup (repo root, in a venv): `pip install -e "packages/healthcare-ai-core[dev]"`.

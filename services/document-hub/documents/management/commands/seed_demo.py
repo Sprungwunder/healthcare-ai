@@ -19,30 +19,30 @@ from documents import permissions, services
 from documents.models import Document, DocumentType, Language
 
 DEMO_NOTE = (
-    "\n\n---\nSynthetisches Demo-Dokument des Document Hub. "
-    "Enthält keine echten Daten.\n"
+    "\n\n---\nSynthetic demo document of the Document Hub. Contains no real data.\n"
 )
 
 DEMO_DOCUMENTS: list[dict[str, Any]] = [
     {
-        "filename": "laborprotokoll-blutbild.md",
-        "title": "Laborprotokoll: Kleines Blutbild (Demo)",
+        "filename": "lab-protocol-complete-blood-count.md",
+        "title": "Lab Protocol: Complete Blood Count (Demo)",
         "document_type": DocumentType.LAB_PROTOCOL,
-        "source": "Demo-Labor Musterstadt",
-        "language": Language.GERMAN,
-        "tags": ["hämatologie", "routine", "demo"],
-        "content": "# Kleines Blutbild\n\nAblauf der Messung am Hämatologie-"
-        "Analysator: Probe mischen, Messung starten, Ergebnisse plausibilisieren.",
+        "source": "Demo Lab Sampletown",
+        "language": Language.ENGLISH,
+        "tags": ["hematology", "routine", "demo"],
+        "content": "# Complete blood count\n\nMeasurement on the hematology "
+        "analyzer: mix the sample, start the measurement, check results "
+        "for plausibility.",
     },
     {
-        "filename": "sop-zentrifuge.txt",
-        "title": "SOP Zentrifugation von Serumproben (Demo)",
+        "filename": "sop-centrifugation.txt",
+        "title": "SOP: Centrifugation of Serum Samples (Demo)",
         "document_type": DocumentType.SOP,
-        "source": "Demo-Labor Musterstadt",
-        "language": Language.GERMAN,
-        "tags": ["präanalytik", "geräte", "demo"],
-        "content": "SOP: Serumröhrchen 30 Minuten gerinnen lassen, dann "
-        "10 Minuten bei 2000 g zentrifugieren.",
+        "source": "Demo Lab Sampletown",
+        "language": Language.ENGLISH,
+        "tags": ["preanalytics", "equipment", "demo"],
+        "content": "SOP: Let serum tubes clot for 30 minutes, then centrifuge "
+        "for 10 minutes at 2000 g.",
     },
     {
         "filename": "guideline-hand-hygiene.md",
@@ -61,29 +61,29 @@ DEMO_DOCUMENTS: list[dict[str, Any]] = [
         "document_type": DocumentType.LAB_PROTOCOL,
         "source": "Demo Molecular Lab",
         "language": Language.ENGLISH,
-        "tags": ["pcr", "molekularbiologie", "demo"],
+        "tags": ["pcr", "molecular biology", "demo"],
         "content": "# Extraction\n\n1. Lyse sample.\n2. Bind to column.\n"
         "3. Wash twice.\n4. Elute in 50 µl buffer.",
     },
     {
-        "filename": "handbuch-analysator.txt",
-        "title": "Technisches Handbuch: Analysator X100 (Demo)",
+        "filename": "manual-analyzer-x100.txt",
+        "title": "Technical Manual: Analyzer X100 (Demo)",
         "document_type": DocumentType.TECHNICAL_MANUAL,
-        "source": "Demo-Medizintechnik GmbH",
-        "language": Language.GERMAN,
-        "tags": ["geräte", "wartung", "demo"],
-        "content": "Wartung: Täglich Reagenzien prüfen, wöchentlich "
-        "Messzellen reinigen, monatlich Kalibrierung durchführen.",
+        "source": "Demo Medical Devices Inc.",
+        "language": Language.ENGLISH,
+        "tags": ["equipment", "maintenance", "demo"],
+        "content": "Maintenance: check reagents daily, clean measuring cells "
+        "weekly, calibrate monthly.",
     },
     {
-        "filename": "leitlinie-praeanalytik.md",
-        "title": "Leitlinie Präanalytik in der Notaufnahme (Demo)",
+        "filename": "guideline-preanalytics-emergency.md",
+        "title": "Guideline: Preanalytics in the Emergency Department (Demo)",
         "document_type": DocumentType.GUIDELINE,
-        "source": "Demo-Fachgesellschaft",
-        "language": Language.GERMAN,
-        "tags": ["präanalytik", "notfall", "demo"],
-        "content": "# Präanalytik\n\nBlutentnahme vor Therapiebeginn, "
-        "korrekte Röhrchenreihenfolge beachten, Proben zeitnah transportieren.",
+        "source": "Demo Professional Society",
+        "language": Language.ENGLISH,
+        "tags": ["preanalytics", "emergency", "demo"],
+        "content": "# Preanalytics\n\nDraw blood before starting therapy, follow "
+        "the correct order of draw, transport samples promptly.",
     },
 ]
 
