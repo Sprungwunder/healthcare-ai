@@ -18,12 +18,10 @@ from documents.downloads import document_file_response
 from documents.models import Document, DocumentType, Language, Tag
 
 SEARCH_PARAMETERS = [
-    OpenApiParameter("q", str, description="Teil des Titels (ohne Groß/Klein)."),
+    OpenApiParameter("q", str, description="Part of the title (case-insensitive)."),
     OpenApiParameter("document_type", str, enum=DocumentType.values),
     OpenApiParameter("language", str, enum=Language.values),
-    OpenApiParameter(
-        "tags", str, description="Kommagetrennt; alle Tags müssen vorhanden sein."
-    ),
+    OpenApiParameter("tags", str, description="Comma-separated; all tags must match."),
     OpenApiParameter("ordering", str, enum=list(search.ORDERINGS)),
 ]
 
@@ -60,7 +58,7 @@ class DocumentViewSet(viewsets.ModelViewSet[Document]):
 
 @extend_schema_view(
     list=extend_schema(
-        parameters=[OpenApiParameter("q", str, description="Teil des Tag-Namens.")]
+        parameters=[OpenApiParameter("q", str, description="Part of the tag name.")]
     )
 )
 class TagViewSet(viewsets.ReadOnlyModelViewSet[Tag]):

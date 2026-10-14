@@ -34,5 +34,7 @@ data source for a RAG assistant; there is no LLM/embedding/search-engine code ye
   permissions needs a new data migration calling `sync_role_groups`.
 - Never log request data or file contents. Uploaded files are only served
   through permission-checked download views (no public `MEDIA_URL`).
-- UI strings are German; code, comments and API field names are English.
+- Language: web UI strings and user-facing validation/API error messages are
+  German; everything else (code, comments, docs, OpenAPI descriptions, CLI
+  help/output) is English. See the language rule in the root `AGENTS.md`.
 - Tests: keep `MEDIA_ROOT` on the tmp dir (autouse fixture in `tests/conftest.py`).

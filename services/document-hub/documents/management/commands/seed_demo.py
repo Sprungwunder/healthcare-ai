@@ -95,13 +95,13 @@ DEMO_USERS = [
 
 
 class Command(BaseCommand):
-    help = "Legt synthetische Demo-Dokumente (und optional Demo-Nutzer) an."
+    help = "Create synthetic demo documents (and optionally demo users)."
 
     def add_arguments(self, parser: CommandParser) -> None:
         parser.add_argument(
             "--password",
-            help="Passwort für die Demo-Nutzer (alternativ "
-            "DOCUMENT_HUB_DEMO_PASSWORD). Ohne Passwort keine Nutzer.",
+            help="Password for the demo users (or set "
+            "DOCUMENT_HUB_DEMO_PASSWORD). Without a password no users are created.",
         )
 
     def handle(self, *args: Any, **options: Any) -> None:
@@ -110,7 +110,7 @@ class Command(BaseCommand):
         )
         owner = self._create_users(password) if password else None
         if not password:
-            self.stdout.write("Keine Demo-Nutzer angelegt (kein Passwort angegeben).")
+            self.stdout.write("No demo users created (no password given).")
 
         created = skipped = 0
         for spec in DEMO_DOCUMENTS:
@@ -126,8 +126,8 @@ class Command(BaseCommand):
                 skipped += 1  # already seeded (duplicate checksum)
         self.stdout.write(
             self.style.SUCCESS(
-                f"{created} Demo-Dokumente angelegt, {skipped} bereits vorhanden "
-                f"({Document.objects.count()} insgesamt)."
+                f"{created} demo documents created, {skipped} already present "
+                f"({Document.objects.count()} in total)."
             )
         )
 
@@ -141,7 +141,7 @@ class Command(BaseCommand):
             if created:
                 user.set_password(password)
                 user.save()
-                self.stdout.write(f"Nutzer {username} ({role}) angelegt.")
+                self.stdout.write(f"User {username} ({role}) created.")
             user.groups.add(Group.objects.get(name=role))
             if role == permissions.EDITOR:
                 editor = user

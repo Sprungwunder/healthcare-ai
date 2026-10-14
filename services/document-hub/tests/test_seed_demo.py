@@ -19,7 +19,7 @@ def run(*args: str) -> str:
 def test_creates_documents_without_users(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DOCUMENT_HUB_DEMO_PASSWORD", raising=False)
     output = run()
-    assert "Keine Demo-Nutzer" in output
+    assert "No demo users" in output
     assert Document.objects.count() == 6
     assert not User.objects.exists()
     assert all("Demo" in d.title for d in Document.objects.all())
@@ -29,7 +29,7 @@ def test_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("DOCUMENT_HUB_DEMO_PASSWORD", raising=False)
     run()
     output = run()
-    assert "0 Demo-Dokumente angelegt, 6 bereits vorhanden" in output
+    assert "0 demo documents created, 6 already present" in output
     assert Document.objects.count() == 6
 
 

@@ -1,86 +1,86 @@
-# Document Hub: Zusammenfassung
+# Document Hub: summary
 
-Erster Service im Mono-Repo: `services/document-hub/`. Er verwaltet medizinische
-und laborbezogene Dokumente (Datei plus Metadaten) mit Suche, Rollen, REST-API
-und deutscher Weboberfläche. Später soll er als Datenquelle für einen
-RAG-Assistenten dienen. LLM, Embeddings, RAG und Elasticsearch sind bewusst
-noch nicht enthalten.
+First service in the mono-repo: `services/document-hub/`. It manages medical
+and lab-related documents (file plus metadata) with search, roles, a REST API
+and a German web UI. Later it will be the data source for a RAG assistant. LLM,
+embeddings, RAG and Elasticsearch are deliberately not part of this version.
 
-## Architekturentscheidungen
+## Architecture decisions
 
-| Thema | Entscheidung | Grund |
+| Topic | Decision | Reason |
 |---|---|---|
-| Stack | Django 6.0, DRF 3.18, drf-spectacular (mit Sidecar, ohne CDN), dj-database-url, psycopg 3, gunicorn, whitenoise | DRF unterstützt Django 6 offiziell, Django 5.2 war daher nicht nötig. |
-| Python/Tooling | ≥ 3.12, uv mit `uv.lock` | CI testet 3.12 und 3.14. |
-| Core-Abhängigkeit | `[tool.uv.sources] healthcare-ai = { path = "../../packages/healthcare-ai-core" }` | **Abweichung vom Plan:** uv lehnt relative `file:`-URLs in `dependencies` ab. Die Wirkung ist dieselbe; die Konvention in `services/README.md` ist ergänzt. |
-| Schichten | API und UI rufen nur `services.py` (Schreiben) und `search.py` (Lesen) auf. Die Regeln stehen in `validators.py`. | API und UI verhalten sich gleich. Der Service validiert selbst noch einmal, so greifen die Regeln auch für `seed_demo`. |
-| Primärschlüssel | UUID | stabil für den späteren Abgleich mit einem externen Index |
-| Dateiprüfung | Endung **und** Inhalt, nur Standardbibliothek | Umbenannte Dateien werden abgelehnt (415). |
-| Duplikate | SHA-256 unique, 400 mit Verweis auf das vorhandene Dokument | Bei einer Race-Condition wird der `IntegrityError` in denselben Fehler übersetzt. |
-| Dateien und Transaktionen | Erst validieren, dann die Datei schreiben, dann die DB-Zeile anlegen. Schlägt das fehl, wird die neue Datei entfernt. Alte Dateien werden erst nach dem Commit gelöscht. | Es bleiben keine verwaisten oder fehlenden Dateien zurück. |
-| Suche | `DocumentSearchBackend`-Protocol, Wahl über `DOCUMENT_HUB_SEARCH_BACKEND` | Ein ES-Backend kommt später ohne Änderungen an API oder UI dazu. |
-| Pipeline-Hooks | Signale `document_created/updated/deleted` per `on_commit`, Feld `processing_status` | Einhängepunkt für Textextraktion und Indexierung |
-| Rollen | Gruppen Leser/Redakteur/Administrator über eine Daten-Migration (`sync_role_groups`) | GET braucht zusätzlich die `view`-Permission (`ModelPermissionsWithView`). |
-| Auth | Token vor Session | Unangemeldete API-Aufrufe bekommen 401 (nicht 403). |
-| Fehlerformat | `{"error": {"code", "message", "details"}}` für 400/401/403/404/413/415 | Fachliche Django-`ValidationError`s aus den Services werden ebenfalls übersetzt. |
-| Downloads | nur über Views mit Rechteprüfung, `Cache-Control: private, no-store` | Es gibt keine öffentliche `MEDIA_URL`. |
-| Settings | alles aus Env, optional `.env` (eigener kleiner Loader, ohne Extra-Abhängigkeit). `DJANGO_DEBUG` ist standardmäßig aus, ohne Secret Key startet nichts. | Sichere Voreinstellung. **Abweichung:** Lokal braucht es vorher `cp .env.example .env`. |
-| HTTPS-Härtung | `DJANGO_HTTPS` (Standard: an, außer bei DEBUG), HSTS-Preload nur per Opt-in | compose läuft lokal per HTTP und schaltet die Härtung deshalb ab. |
-| Admin | Dokumente im Django-Admin nur lesbar | Anlegen, Ändern und Löschen laufen über UI/API, damit Dateiregeln und Signale immer greifen. |
-| Laufzeit-Generics | `django-stubs-ext` als Runtime-Abhängigkeit (`monkeypatch()`) | Für typisierte Views wie `ListView[Document]` |
+| Stack | Django 6.0, DRF 3.18, drf-spectacular (with sidecar, no CDN), dj-database-url, psycopg 3, gunicorn, whitenoise | DRF officially supports Django 6, so the Django 5.2 fallback wasn't needed. |
+| Python/tooling | ≥ 3.12, uv with `uv.lock` | CI tests 3.12 and 3.14. |
+| Core dependency | `[tool.uv.sources] healthcare-ai = { path = "../../packages/healthcare-ai-core" }` | **Deviation from the plan:** uv rejects relative `file:` URLs in `dependencies`. Same effect; the convention in `services/README.md` was extended. |
+| Layers | API and UI call only `services.py` (writes) and `search.py` (reads). Rules live in `validators.py`. | API and UI behave the same. The service validates again, so the rules also apply to `seed_demo`. |
+| Primary key | UUID | Stable for later syncing with an external index. |
+| File check | Extension **and** content, standard library only | Renamed files are rejected (415). |
+| Duplicates | SHA-256 unique, 400 with a reference to the existing document | A race condition's `IntegrityError` is turned into the same error. |
+| Files and transactions | Validate first, then write the file, then the DB row. On failure the new file is removed. Old files are deleted only after commit. | No orphaned or missing files. |
+| Search | `DocumentSearchBackend` protocol, selected via `DOCUMENT_HUB_SEARCH_BACKEND` | An ES backend can be added later without touching API or UI. |
+| Pipeline hooks | Signals `document_created/updated/deleted` via `on_commit`, field `processing_status` | Hook for text extraction and indexing. |
+| Roles | Groups Leser/Redakteur/Administrator via a data migration (`sync_role_groups`) | GET additionally requires the `view` permission (`ModelPermissionsWithView`). |
+| Auth | Token before session | Unauthenticated API calls get 401 (not 403). |
+| Error format | `{"error": {"code", "message", "details"}}` for 400/401/403/404/413/415 | Django `ValidationError`s from the services are translated too. |
+| Downloads | Only through permission-checked views, `Cache-Control: private, no-store` | There is no public `MEDIA_URL`. |
+| Settings | Everything from env, optional `.env` (small own loader, no extra dependency). `DJANGO_DEBUG` defaults to off; without a secret key nothing starts. | Secure default. **Deviation:** locally you first need `cp .env.example .env`. |
+| HTTPS hardening | `DJANGO_HTTPS` (default on, except with DEBUG), HSTS preload opt-in only | compose runs plain HTTP locally and turns the hardening off. |
+| Admin | Documents are read-only in the Django admin | Create, edit and delete go through UI/API, so file rules and signals always apply. |
+| Runtime generics | `django-stubs-ext` as a runtime dependency (`monkeypatch()`) | For typed views such as `ListView[Document]`. |
+| Language | UI and user-facing messages in German; code, docs, API docs and CLI in English | See the language rule in the root `AGENTS.md`. |
 
-## Was geändert wurde
+## What changed
 
-Commits auf `feature/document-hub`:
+Commits on `feature/document-hub` (PR #5):
 
-1. Gerüst: pyproject/uv.lock, Settings, Docs für Agents, Settings-Smoke-Test
-2. Modelle `Document`/`Tag`, Migrationen inkl. Rollen-Gruppen, Admin
-3. Validatoren, Services und Signale
-4. Such-Abstraktion
-5. REST-API, Rechte, Fehlerformat, OpenAPI
-6. Weboberfläche (Templates, responsives CSS, Forms, Views)
+1. Scaffold: pyproject/uv.lock, settings, agent docs, settings smoke test
+2. Models `Document`/`Tag`, migrations incl. role groups, admin
+3. Validators, services and signals
+4. Search abstraction
+5. REST API, permissions, error format, OpenAPI
+6. Web UI (templates, responsive CSS, forms, views)
 7. `seed_demo`, Dockerfile (+ `Dockerfile.dockerignore`), `compose.yaml`
-8. CI-Job `document-hub` sowie Doku-Updates (`services/README.md`, `services/AGENTS.md`, Root-`AGENTS.md`/`README.md`, `docs/architecture.md`)
+8. CI job `document-hub` and doc updates (`services/README.md`, `services/AGENTS.md`, root `AGENTS.md`/`README.md`, `docs/architecture.md`)
+9. This summary; docs switched to English and the language rule added to `AGENTS.md`
 
-CI: Die `on:`-Filter enthalten jetzt `services/document-hub/**`. Ein `changes`-Job
-(`dorny/paths-filter`) sorgt dafür, dass `document-hub` nur bei Änderungen am
-Hub, an Core, an der Ruff-Config oder an der Workflow-Datei läuft. Der Job läuft
-mit Python 3.12 und 3.14: `uv sync --locked`, ruff, mypy, pytest gegen einen
-Postgres-17-Service-Container, danach `docker build` (nur 3.14). Der `core`-Job
-ist unverändert. Er läuft jetzt aber auch, wenn nur der Hub geändert wird, weil
-Filter auf Workflow-Ebene alle Jobs auslösen.
+CI: the `on:` filters now include `services/document-hub/**`. A `changes` job
+(`dorny/paths-filter`) makes sure `document-hub` runs only when the hub, core,
+the ruff config or the workflow file change. The job runs on Python 3.12 and
+3.14: `uv sync --locked`, ruff, mypy, pytest against a Postgres 17 service
+container, then `docker build` (3.14 only). The `core` job is unchanged. It now
+also runs when only the hub changes, because workflow-level filters trigger all
+jobs.
 
-## Testergebnisse (lokal, 2026-10-14)
+## Test results (2026-10-14)
 
-- `uv run pytest --cov`: **152 Tests grün, Coverage 97,7 %** (Grenze 90 %). Gleiches Ergebnis mit Python 3.12 und 3.14.
-- Gleiche Suite gegen Postgres 17 (compose-`db`): grün.
-- `uv run mypy .` (django-stubs, djangorestframework-stubs): keine Fehler.
-- `ruff check .` / `ruff format --check .` von der Repo-Wurzel: sauber.
-- Core: `pytest --cov=healthcare_ai` (100 %) und `mypy src` grün.
-- `drf-spectacular --validate --fail-on-warn`: Schema ohne Warnungen.
-- `docker compose up --build`, dann manuell per `curl`:
-  - Rechte: anonym 401, Leser darf nicht anlegen (403), Redakteur darf nicht löschen (403), Admin löscht (204).
-  - Upload, Suche nach Tags, PATCH und Download funktionieren.
-  - Duplikat 400, gefälschte PDF 415, 10,5-MB-Datei 413.
-  - Web-Flow per Session: Login, Upload, Suche, Bearbeiten (Redakteur), Löschen (Admin). Die Buttons erscheinen je nach Rolle.
-  - `/media/` gibt 404 zurück.
+- `uv run pytest --cov`: **152 tests passing, coverage 97.7 %** (threshold 90 %). Same result on Python 3.12 and 3.14.
+- Same suite against Postgres 17 (compose `db`): passing.
+- `uv run mypy .` (django-stubs, djangorestframework-stubs): no errors.
+- `ruff check .` / `ruff format --check .` from the repo root: clean.
+- Core: `pytest --cov=healthcare_ai` (100 %) and `mypy src` passing.
+- `drf-spectacular --validate --fail-on-warn`: schema without warnings.
+- **GitHub Actions (PR #5):** all jobs green: `changes`, `core` (3.10, 3.11, 3.12, 3.14), `document-hub` (3.12, 3.14) incl. Postgres tests and Docker build.
+- `docker compose up --build`, then manually with `curl`:
+  - Permissions: anonymous 401, reader can't create (403), editor can't delete (403), admin deletes (204).
+  - Upload, tag search, PATCH and download work.
+  - Duplicate 400, forged PDF 415, 10.5 MB file 413.
+  - Web flow via session: login, upload, search, edit (editor), delete (admin). Buttons appear according to the role.
+  - `/media/` returns 404.
 
-Nicht geprüft: die Darstellung im Browser (Layout auf Desktop und Handy) und der
-erste echte GitHub-Actions-Lauf.
+Not verified: rendering in a real browser (desktop and phone layout).
 
-## Bekannte Einschränkungen
+## Known limitations
 
-- SQLite faltet bei `icontains` nur ASCII (`Ä` ≠ `ä`). Postgres macht das korrekt.
-- Zu große Uploads werden erst nach dem Empfang abgelehnt. In Produktion sollte der Proxy die Request-Größe begrenzen (z. B. `client_max_body_size`).
-- Wer `auth.change_user` hat, kann im Django-Admin auch `is_superuser` setzen (Standardverhalten von Django). Die Administrator-Rolle ist also faktisch voll vertrauenswürdig.
-- Die Migration läuft beim Container-Start. Bei mehreren Replikas gehört sie in einen separaten Job.
-- Tags werden alphabetisch zurückgegeben, nicht in der Reihenfolge der Eingabe.
+- SQLite folds only ASCII in `icontains` (`Ä` ≠ `ä`). Postgres handles this correctly.
+- Uploads that are too large are rejected only after they've been received. In production the proxy should limit the request size (e.g. `client_max_body_size`).
+- Anyone with `auth.change_user` can also set `is_superuser` in the Django admin (Django's default behaviour). The Administrator role is therefore effectively fully trusted.
+- Migrations run on container start. With several replicas they belong in a separate job.
+- Tags are returned alphabetically, not in input order.
 
-## Nächste Schritte
+## Next steps
 
-1. PR öffnen und den ersten CI-Lauf prüfen (insbesondere die `setup-uv`/`paths-filter`-Versionen und den Docker-Build).
-2. Optional: beim Upload bestätigen lassen, dass das Dokument keine Patientendaten enthält.
-3. Textextraktion (PDF/DOCX) als Signal-Receiver mit `processing_status`, danach Embeddings und Index.
-4. `ElasticsearchSearchBackend` mit Volltext, wenn die Titelsuche nicht mehr reicht.
-5. Virenscan, Objekt-Storage (S3 über django-storages), Audit-Log.
-6. Die Administrator-Rolle ohne Superuser-Eskalation (eigener `UserAdmin`).
+1. Optional: ask uploaders to confirm that a document contains no patient data.
+2. Text extraction (PDF/DOCX) as a signal receiver using `processing_status`, then embeddings and an index.
+3. `ElasticsearchSearchBackend` with full-text search once title search is no longer enough.
+4. Virus scanning, object storage (S3 via django-storages), audit log.
+5. Administrator role without superuser escalation (custom `UserAdmin`).

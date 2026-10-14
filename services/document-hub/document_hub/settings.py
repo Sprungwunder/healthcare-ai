@@ -177,7 +177,7 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Healthcare Document Hub API",
-    "DESCRIPTION": "Verwaltung medizinischer und laborbezogener Dokumente.",
+    "DESCRIPTION": "Manage medical and lab-related documents.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SERVE_PERMISSIONS": ["documents.api.permissions.CanViewDocuments"],

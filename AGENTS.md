@@ -16,6 +16,16 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
 - Run area commands from the area's directory; run ruff from the repo root.
 - Read other areas only when needed (e.g. a service reading core's API).
 
+## Project language: English
+- Everything written into the repo or to GitHub is in English, **even when the
+  conversation with the user is in another language** (e.g. German): code,
+  identifiers, comments, docstrings, Markdown and other docs, API docs
+  (OpenAPI descriptions), CLI help and output, commit messages, PR titles and
+  descriptions.
+- Only exception: end-user product text whose language a service defines
+  (e.g. the German web UI and user-facing validation messages of
+  `services/document-hub`). Keep such text in that language.
+
 ## Commands
 Setup (repo root, in a venv): `pip install -e "packages/healthcare-ai-core[dev]"`.
 Services use uv instead (`~/.local/bin/uv` if not on PATH); see each service's `AGENTS.md`.
