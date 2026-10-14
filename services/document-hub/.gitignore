@@ -1,0 +1,4 @@
+# Local runtime artefacts of the document hub (uploads can contain sensitive files).
+db.sqlite3
+media/
+staticfiles/
