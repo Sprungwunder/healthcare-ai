@@ -19,7 +19,7 @@ The primary objective of this repository is to maximize developer productivity, 
 healthcare-ai/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml              # GitHub Actions CI, one job per area (core: Python 3.10–3.14)
+│       └── ci.yml              # GitHub Actions CI, one job per area (core: Python 3.10–3.14, document-hub: 3.12/3.14)
 ├── .junie/
 │   └── guidelines.md           # Junie entry point (points to AGENTS.md)
 ├── packages/
@@ -30,7 +30,8 @@ healthcare-ai/
 │       ├── requirements.txt    # Production dependency specifications
 │       ├── requirements-dev.txt # Development, testing, and static analysis tooling
 │       └── AGENTS.md           # Assistant guidance for core
-├── services/                   # Deployable web services, one folder each (none yet)
+├── services/                   # Deployable web services, one folder each
+│   ├── document-hub/           # Django document service (uv, Docker)
 │   └── README.md               # Conventions for adding a service
 ├── configs/                    # Experiment configurations, hyperparameters, model configs
 ├── data/                       # Healthcare and tabular/imaging datasets (gitignored)

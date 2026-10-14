@@ -1,0 +1,51 @@
+# Local stack: Django (gunicorn) + Postgres. Run from this directory:
+#   cp .env.example .env   # set DJANGO_SECRET_KEY and POSTGRES_PASSWORD
+#   docker compose up --build
+# Plain HTTP on localhost, so the HTTPS hardening is switched off here.
+name: document-hub
+
+services:
+  web:
+    build:
+      context: ../..
+      dockerfile: services/document-hub/Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?set DJANGO_SECRET_KEY in .env}
+      DJANGO_DEBUG: "false"
+      DJANGO_HTTPS: "false"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
+      DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000
+      DATABASE_URL: postgres://document_hub:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/document_hub
+      DOCUMENT_HUB_MAX_UPLOAD_SIZE: ${DOCUMENT_HUB_MAX_UPLOAD_SIZE:-10485760}
+      DOCUMENT_HUB_DEMO_PASSWORD: ${DOCUMENT_HUB_DEMO_PASSWORD:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - media:/data/media
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: document_hub
+      POSTGRES_USER: document_hub
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    ports:
+      # For running the test suite against Postgres from the host.
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U document_hub -d document_hub"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  media:

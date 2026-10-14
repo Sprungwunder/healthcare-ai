@@ -5,7 +5,8 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
 
 ## Repo map
 - `packages/healthcare-ai-core/`: the `healthcare_ai` Python library (3.10+). See its `AGENTS.md`.
-- `services/`: deployable web services, one folder each (none yet). See `services/AGENTS.md`.
+- `services/`: deployable web services, one folder each. See `services/AGENTS.md`.
+  - `services/document-hub/`: Django document service. See its `AGENTS.md`.
 - `configs/`, `data/`, `models/`, `notebooks/`: shared ML workspace. `data/` and `models/` contents are gitignored.
 - `docs/`: architecture notes (`docs/architecture.md`) and write-ups.
 - `pyproject.toml` (root): shared ruff config only, not a package.
@@ -15,13 +16,25 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
 - Run area commands from the area's directory; run ruff from the repo root.
 - Read other areas only when needed (e.g. a service reading core's API).
 
+## Project language: English
+- Everything written into the repo or to GitHub is in English, **even when the
+  conversation with the user is in another language** (e.g. German): code,
+  identifiers, comments, docstrings, Markdown and other docs, API docs
+  (OpenAPI descriptions), CLI help and output, commit messages, PR titles and
+  descriptions.
+- This includes user-facing product text (web UI, validation and API error
+  messages) and synthetic demo and test data. Only real content data may be in other
+  languages (e.g. an uploaded German document and its title).
+
 ## Commands
-Setup (repo root, in a venv): `pip install -e "packages/healthcare-ai-core[dev]"`
+Setup (repo root, in a venv): `pip install -e "packages/healthcare-ai-core[dev]"`.
+Services use uv instead (`~/.local/bin/uv` if not on PATH); see each service's `AGENTS.md`.
 
 | Area | Directory | Commands |
 |------|-----------|----------|
 | Lint/format (all) | repo root | `ruff check .` and `ruff format --check .` |
 | Core | `packages/healthcare-ai-core` | `pytest --cov=healthcare_ai`, `mypy src` |
+| Document hub | `services/document-hub` | `uv sync`, `uv run pytest --cov`, `uv run mypy .` |
 
 ## Healthcare data rules (non-negotiable)
 - Never commit patient data, PHI/PII or credentials. Never print or log them.

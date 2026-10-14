@@ -1,18 +1,21 @@
 name: CI
 
-# One job per area. Each job filters on its own paths so a change in one service
-# doesn't rerun the others. Add a new job (and filter) per service under services/.
+# One job per area. The workflow triggers on any area's paths; service jobs then
+# check their own paths (`changes` job) so a change in one area doesn't rerun the
+# others. Add a new job (and filter) per service under services/.
 on:
   push:
     branches: [ "main", "master" ]
     paths:
       - "packages/healthcare-ai-core/**"
+      - "services/document-hub/**"
       - "pyproject.toml"
       - ".github/workflows/ci.yml"
   pull_request:
     branches: [ "main", "master" ]
     paths:
       - "packages/healthcare-ai-core/**"
+      - "services/document-hub/**"
       - "pyproject.toml"
       - ".github/workflows/ci.yml"
 
@@ -53,3 +56,84 @@ jobs:
         working-directory: packages/healthcare-ai-core
         run: |
           pytest --cov=healthcare_ai --cov-report=xml
+
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      document-hub: ${{ steps.filter.outputs.document-hub }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            document-hub:
+              - "services/document-hub/**"
+              - "packages/healthcare-ai-core/**"
+              - "pyproject.toml"
+              - ".github/workflows/ci.yml"
+
+  document-hub:
+    needs: changes
+    if: needs.changes.outputs.document-hub == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.14"]
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: document_hub
+          POSTGRES_USER: document_hub
+          # Throwaway CI container reachable only from this job: no password.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U document_hub"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgres://document_hub@localhost:5432/document_hub
+
+    defaults:
+      run:
+        working-directory: services/document-hub
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up uv with Python ${{ matrix.python-version }}
+        uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-glob: services/document-hub/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Lint with Ruff
+        working-directory: .
+        run: |
+          uv run --project services/document-hub ruff check .
+          uv run --project services/document-hub ruff format --check .
+
+      - name: Type check with Mypy
+        run: uv run mypy .
+
+      - name: Run tests with pytest (Postgres)
+        run: uv run pytest --cov --cov-report=xml
+
+      - name: Build Docker image
+        if: matrix.python-version == '3.14'
+        working-directory: .
+        run: docker build -f services/document-hub/Dockerfile -t document-hub:ci .

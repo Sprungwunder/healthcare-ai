@@ -1,0 +1,21 @@
+# Build context is the repository root; send only what the image needs.
+*
+!packages/healthcare-ai-core/
+!services/document-hub/
+
+**/__pycache__/
+**/*.py[cod]
+**/.venv/
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.coverage
+**/htmlcov/
+**/*.egg-info/
+**/build/
+packages/healthcare-ai-core/tests/
+services/document-hub/tests/
+services/document-hub/.env
+services/document-hub/db.sqlite3
+services/document-hub/media/
+services/document-hub/staticfiles/

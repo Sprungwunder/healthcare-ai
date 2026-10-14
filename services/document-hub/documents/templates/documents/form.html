@@ -1,0 +1,22 @@
+{% extends "documents/base.html" %}
+{% block title %}{% if document %}Edit{% else %}New document{% endif %}{% endblock %}
+{% block content %}
+<h1>{% if document %}Edit “{{ document.title }}”{% else %}New document{% endif %}</h1>
+<form method="post" enctype="multipart/form-data" class="card doc-form" novalidate>
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="form-errors" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+  {% for field in form %}
+  <div class="field{% if field.errors %} has-error{% endif %}">
+    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span aria-hidden="true">*</span>{% endif %}</label>
+    {{ field }}
+    {% if field.help_text %}<small class="help">{{ field.help_text }}</small>{% endif %}
+    {% for error in field.errors %}<p class="field-error">{{ error }}</p>{% endfor %}
+  </div>
+  {% endfor %}
+  {% include "documents/_tag_datalist.html" %}
+  <div class="form-actions">
+    <button type="submit" class="button primary">Save</button>
+    <a class="button" href="{% if document %}{{ document.get_absolute_url }}{% else %}{% url 'documents:list' %}{% endif %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

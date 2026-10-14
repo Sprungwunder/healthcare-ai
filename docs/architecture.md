@@ -6,6 +6,7 @@ on it live side by side.
 ```text
 packages/healthcare-ai-core/   # the healthcare_ai library (Python 3.10+)
 services/<name>/               # deployable services, each its own project
+  document-hub/                # Django 6 document service (first service)
 configs/ data/ models/ notebooks/   # shared ML workspace
 docs/                          # this file and other notes
 pyproject.toml                 # shared ruff config only
@@ -27,11 +28,31 @@ pyproject.toml                 # shared ruff config only
   path dependency rather than a shared workspace, because services may need a
   newer Python than core (e.g. Django 6 needs 3.12+, core supports 3.10+).
 - **Services never import each other**; they communicate over HTTP/APIs.
-- **Tooling:** pip/setuptools for now. Ruff config is shared from the root
-  `pyproject.toml`; mypy and pytest are configured per project.
-- **CI:** one job per area in `.github/workflows/ci.yml`, each with a `paths:`
-  filter so unrelated changes don't trigger it.
+- **Tooling:** core uses pip/setuptools; services use uv with a committed
+  `uv.lock` (path dependency on core via `[tool.uv.sources]`). Ruff config is
+  shared from the root `pyproject.toml`; mypy and pytest are configured per
+  project.
+- **CI:** one job per area in `.github/workflows/ci.yml`. The workflow triggers
+  on every area's paths; service jobs additionally check their own paths
+  (`dorny/paths-filter`) so unrelated changes don't run them.
 - **ML workspace stays at the root** (`data/`, `models/`, `notebooks/`,
   `configs/`), shared by all areas and protected by `.gitignore`.
 
-See `services/README.md` for the service conventions.
+## Document hub (`services/document-hub/`)
+Stores medical/lab documents (files + metadata) and will feed a RAG assistant.
+
+- **Layers:** REST API (DRF) and web UI (Django templates) only validate input
+  format and call `documents/services.py` (writes, transactional) and
+  `documents/search.py` (reads). Shared rules live in `documents/validators.py`,
+  so API and UI behave the same.
+- **Search** goes through a `DocumentSearchBackend` protocol chosen by
+  `DOCUMENT_HUB_SEARCH_BACKEND`; the default queries the database. An
+  Elasticsearch backend can be added without touching API or UI.
+- **Pipeline hooks:** `document_created/updated/deleted` signals fire after
+  commit; `Document.processing_status`, checksum, MIME type and size prepare
+  text extraction and indexing.
+- **Access:** roles are Django groups (Reader, Editor, Administrator) with
+  model permissions; files are only served through permission-checked views.
+
+See `services/README.md` for the service conventions and
+`docs/document-hub-summary.md` for the decisions behind the document hub.

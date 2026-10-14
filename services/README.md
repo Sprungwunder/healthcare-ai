@@ -1,9 +1,10 @@
 # services/
 
 Deployable web services built on top of the `healthcare_ai` core library.
-There are none yet; the first planned one is a Django "document hub". The
-conventions below are a starting point and will be revisited when that service
-is designed.
+
+| Service | What it does |
+|---|---|
+| [`document-hub/`](document-hub/README.md) | Django 6 service for medical/lab documents: upload, metadata, search, roles, REST API, web UI |
 
 ## Conventions
 
@@ -12,11 +13,19 @@ is designed.
   - a `Dockerfile`,
   - its own `tests/`,
   - an `AGENTS.md` (plus a `CLAUDE.md` containing just `@AGENTS.md`).
-- **Depend on core through a local path dependency**, not a shared workspace:
+- **Depend on core through a local path dependency**, not a shared workspace.
+  With pip/setuptools:
   ```toml
   dependencies = [
       "healthcare-ai @ file:../../packages/healthcare-ai-core",
   ]
+  ```
+  With uv (which rejects relative `file:` URLs), declare it as a source:
+  ```toml
+  dependencies = ["healthcare-ai"]
+
+  [tool.uv.sources]
+  healthcare-ai = { path = "../../packages/healthcare-ai-core", editable = true }
   ```
   Services may need a newer Python than core (Django 6 needs 3.12+, core
   supports 3.10+), so they must not share one dependency resolver range.
@@ -25,5 +34,8 @@ is designed.
 - **Lint config is shared:** ruff uses the root `pyproject.toml`. If a service
   needs a different `target-version`, add a `[tool.ruff]` section with
   `extend = "../../pyproject.toml"` rather than copying the rules.
-- **CI:** add a job in `.github/workflows/ci.yml` with a `paths:` filter on
-  `services/<name>/**`, mirroring the `core` job.
+- **Tooling:** new services use **uv** with a committed `uv.lock`
+  (see `document-hub/`).
+- **CI:** add the service's paths to the workflow's `on:` filters and a job in
+  `.github/workflows/ci.yml` that runs only when those paths change (see the
+  `changes` and `document-hub` jobs).
