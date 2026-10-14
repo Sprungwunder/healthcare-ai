@@ -19,38 +19,45 @@ The primary objective of this repository is to maximize developer productivity, 
 healthcare-ai/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml          # GitHub Actions CI matrix (Python 3.10, 3.11, 3.12)
-├── configs/                # Experiment configurations, hyperparameters, model configs
-├── data/                   # Healthcare and tabular/imaging datasets (gitignored)
-│   ├── raw/                # Immutable raw datasets (read-only)
-│   └── processed/          # Sanitized, preprocessed, or featurized data
-├── docs/                   # Architectural notes, data dictionaries, and API documentation
-├── models/                 # Model checkpoints, serialized artifacts (.pt, .onnx, etc.)
-├── notebooks/              # Jupyter notebooks for exploratory analysis and prototyping
-├── src/
-│   └── healthcare_ai/      # Core reusable library and pipeline implementations
-│       └── __init__.py     # Package initialization and version definition
-├── tests/                  # Automated test suite (unit, integration, regression)
-│   ├── __init__.py
-│   └── test_basic.py       # Basic test and sanity checks
-├── .env.example            # Template for environment variables and secrets
-├── .gitignore              # Rules ignoring caches, data files, models, and environments
-├── pyproject.toml          # PEP 517/621 build configuration and tool settings
-├── requirements.txt        # Production dependency specifications
-├── requirements-dev.txt    # Development, testing, and static analysis tooling
-└── README.md               # Repository documentation
+│       └── ci.yml              # GitHub Actions CI, one job per area (core: Python 3.10–3.14)
+├── .junie/
+│   └── guidelines.md           # Junie entry point (points to AGENTS.md)
+├── packages/
+│   └── healthcare-ai-core/     # Core library, imported as `healthcare_ai`
+│       ├── src/healthcare_ai/  # Reusable library and pipeline implementations
+│       ├── tests/              # Pytest suite for the core library
+│       ├── pyproject.toml      # Package build, pytest and mypy config
+│       ├── requirements.txt    # Production dependency specifications
+│       ├── requirements-dev.txt # Development, testing, and static analysis tooling
+│       └── AGENTS.md           # Assistant guidance for core
+├── services/                   # Deployable web services, one folder each (none yet)
+│   └── README.md               # Conventions for adding a service
+├── configs/                    # Experiment configurations, hyperparameters, model configs
+├── data/                       # Healthcare and tabular/imaging datasets (gitignored)
+│   ├── raw/                    # Immutable raw datasets (read-only)
+│   └── processed/              # Sanitized, preprocessed, or featurized data
+├── docs/                       # Architecture notes (architecture.md) and write-ups
+├── models/                     # Model checkpoints, serialized artifacts (.pt, .onnx, etc.)
+├── notebooks/                  # Jupyter notebooks for exploratory analysis and prototyping
+├── .env.example                # Template for environment variables and secrets
+├── .gitignore                  # Rules ignoring caches, data files, models, and environments
+├── AGENTS.md                   # Assistant guidance: repo map, commands, PHI rules
+├── CLAUDE.md                   # Claude Code entry point (imports AGENTS.md)
+├── pyproject.toml              # Shared ruff lint/format config (not a package)
+└── README.md                   # Repository documentation
 ```
 
 ---
 
 ## Detailed Directory Guide
 
-- **`src/healthcare_ai/`**: The core package. Designed to house modular subpackages for data loaders, preprocessing pipelines, model architectures, loss functions, evaluation metrics, and inference serving.
+- **`packages/healthcare-ai-core/`**: The core package (`healthcare_ai`). Designed to house modular subpackages for data loaders, preprocessing pipelines, model architectures, loss functions, evaluation metrics, and inference serving.
 - **`data/`**: Structured into `raw/` and `processed/`. Configured with `.gitkeep` files while ensuring all actual medical data remains untracked to protect patient privacy and keep repository storage optimal.
 - **`configs/`**: Centralized storage for YAML/JSON configurations, enabling deterministic runs and experiment tracking without hardcoding parameters.
 - **`models/`**: Dedicated directory for local checkpoints and weights. Binary artifacts are excluded from version control.
 - **`notebooks/`**: Scratchpad and exploratory workspace for exploratory data analysis (EDA) and experimental validation.
-- **`tests/`**: Pytest test suite ensuring code robustness and preventing regressions across package components.
+- **`packages/healthcare-ai-core/tests/`**: Pytest test suite ensuring code robustness and preventing regressions across package components.
+- **`services/`**: Web services built on the core library, each an independent project. See [`services/README.md`](services/README.md) and [`docs/architecture.md`](docs/architecture.md) for the mono-repo layout and rationale.
 
 ---
 
@@ -77,10 +84,10 @@ healthcare-ai/
    ```
 
 3. **Install the package and dependencies:**
-   To install the package in editable mode along with development and test tools:
+   To install the core package in editable mode along with development and test tools:
    ```bash
    pip install --upgrade pip
-   pip install -e ".[dev]"
+   pip install -e "packages/healthcare-ai-core[dev]"
    ```
 
 4. **Set up local environment variables:**
@@ -93,14 +100,15 @@ healthcare-ai/
 
 ## Development & Code Quality Standards
 
-To maintain high code quality and prevent defects before deployment, standardized tools are configured in `pyproject.toml`:
+To maintain high code quality and prevent defects before deployment, standardized tools are configured in `pyproject.toml` files: ruff in the root one (shared by every package and service), pytest and mypy per project.
 
-- **Run Automated Tests:**
+- **Run Automated Tests** (from the core directory):
   ```bash
-  pytest
+  cd packages/healthcare-ai-core
+  pytest --cov=healthcare_ai
   ```
 
-- **Run Code Formatting & Linting (Ruff):**
+- **Run Code Formatting & Linting (Ruff)** (from the repo root):
   ```bash
   ruff check .
   ruff format --check .
@@ -111,8 +119,9 @@ To maintain high code quality and prevent defects before deployment, standardize
   ruff check --fix .
   ```
 
-- **Static Type Checking (Mypy):**
+- **Static Type Checking (Mypy)** (from the core directory):
   ```bash
+  cd packages/healthcare-ai-core
   mypy src
   ```
 
@@ -120,8 +129,8 @@ To maintain high code quality and prevent defects before deployment, standardize
 
 ## Continuous Integration (CI)
 
-A multi-version GitHub Actions pipeline (`.github/workflows/ci.yml`) triggers on every push and pull request targeting `main` / `master`. It validates:
-- Dependency installation across Python 3.10, 3.11, 3.12 and 3.14.
+A GitHub Actions pipeline (`.github/workflows/ci.yml`) has one job per area. The `core` job triggers on pushes and pull requests targeting `main` / `master` that touch `packages/healthcare-ai-core/`, the root `pyproject.toml` or the workflow file. It validates:
+- Installation of the core package across Python 3.10, 3.11, 3.12 and 3.14.
 - Code style and linting compliance with `ruff`.
 - Type correctness with `mypy`.
 - Unit test execution and test coverage reports with `pytest`.
