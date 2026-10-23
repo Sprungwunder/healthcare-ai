@@ -8,6 +8,7 @@ on:
     branches: [ "main", "master" ]
     paths:
       - "packages/healthcare-ai-core/**"
+      - "packages/lab-agent/**"
       - "services/document-hub/**"
       - "pyproject.toml"
       - ".github/workflows/ci.yml"
@@ -15,6 +16,7 @@ on:
     branches: [ "main", "master" ]
     paths:
       - "packages/healthcare-ai-core/**"
+      - "packages/lab-agent/**"
       - "services/document-hub/**"
       - "pyproject.toml"
       - ".github/workflows/ci.yml"
@@ -57,6 +59,40 @@ jobs:
         run: |
           pytest --cov=healthcare_ai --cov-report=xml
 
+  lab-agent:
+    needs: changes
+    if: needs.changes.outputs.lab-agent == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.14"]
+
+    defaults:
+      run:
+        working-directory: packages/lab-agent
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: packages/lab-agent/pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Type check with Mypy
+        run: mypy src
+
+      - name: Run tests with pytest
+        run: pytest --cov=lab_agent --cov-report=xml
+
   changes:
     runs-on: ubuntu-latest
     permissions:
@@ -64,12 +100,17 @@ jobs:
       pull-requests: read
     outputs:
       document-hub: ${{ steps.filter.outputs.document-hub }}
+      lab-agent: ${{ steps.filter.outputs.lab-agent }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
         id: filter
         with:
           filters: |
+            lab-agent:
+              - "packages/lab-agent/**"
+              - "pyproject.toml"
+              - ".github/workflows/ci.yml"
             document-hub:
               - "services/document-hub/**"
               - "packages/healthcare-ai-core/**"

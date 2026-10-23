@@ -5,6 +5,7 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
 
 ## Repo map
 - `packages/healthcare-ai-core/`: the `healthcare_ai` Python library (3.10+). See its `AGENTS.md`.
+- `packages/lab-agent/`: minimal tool-calling agent (training exercise, stdlib only). See its `AGENTS.md`.
 - `services/`: deployable web services, one folder each. See `services/AGENTS.md`.
   - `services/document-hub/`: Django document service. See its `AGENTS.md`.
 - `configs/`, `data/`, `models/`, `notebooks/`: shared ML workspace. `data/` and `models/` contents are gitignored.
@@ -27,13 +28,15 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
   languages (e.g. an uploaded German document and its title).
 
 ## Commands
-Setup (repo root, in a venv): `pip install -e "packages/healthcare-ai-core[dev]"`.
+Setup (repo root, in a venv): `pip install -e "packages/healthcare-ai-core[dev]"`
+(and `pip install -e "packages/lab-agent[dev]"` for the lab agent).
 Services use uv instead (`~/.local/bin/uv` if not on PATH); see each service's `AGENTS.md`.
 
 | Area | Directory | Commands |
 |------|-----------|----------|
 | Lint/format (all) | repo root | `ruff check .` and `ruff format --check .` |
 | Core | `packages/healthcare-ai-core` | `pytest --cov=healthcare_ai`, `mypy src` |
+| Lab agent | `packages/lab-agent` | `pytest --cov=lab_agent`, `mypy src` |
 | Document hub | `services/document-hub` | `uv sync`, `uv run pytest --cov`, `uv run mypy .` |
 
 ## Healthcare data rules (non-negotiable)
