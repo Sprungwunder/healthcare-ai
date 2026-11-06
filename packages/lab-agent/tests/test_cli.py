@@ -72,3 +72,12 @@ def test_model_error_is_reported(capsys: pytest.CaptureFixture[str]) -> None:
 
     assert main(["Hi"], client=FailingClient()) == 1
     assert "HTTP 500: boom" in capsys.readouterr().err
+
+
+def test_anthropic_provider_reads_its_own_api_key(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    assert main(["--provider", "anthropic", "Hi"]) == 1
+    assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err
