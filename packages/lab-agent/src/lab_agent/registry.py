@@ -12,7 +12,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from lab_agent.tools import ToolError, get_document_details, search_lab_documents
+from lab_agent.tools import (
+    ToolError,
+    evaluate_lab_results,
+    get_document_details,
+    search_lab_documents,
+)
 
 # JSON Schema type names supported by ``validate_arguments``.
 _JSON_TYPES: dict[str, type] = {"string": str}
@@ -88,5 +93,17 @@ LAB_TOOLS: tuple[Tool, ...] = (
             "document_id", "Document ID from a search result, e.g. 'LAB-1002'."
         ),
         function=get_document_details,
+    ),
+    Tool(
+        name="evaluate_lab_results",
+        description=(
+            "Evaluate lab results in a document by its ID against reference "
+            "ranges. Returns findings for each analyte (normal, high, low) "
+            "and counts of abnormal values."
+        ),
+        parameters=_string_parameter(
+            "document_id", "Document ID to evaluate, e.g. 'LAB-1002'."
+        ),
+        function=evaluate_lab_results,
     ),
 )

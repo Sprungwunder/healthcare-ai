@@ -10,15 +10,20 @@ standard-library Python.
 | Module | Role | Knows about the LLM? |
 |--------|------|----------------------|
 | `documents.py` | Six fictional lab reports (`SYN-` patient refs) | no |
-| `tools.py` | `search_lab_documents(query)`, `get_document_details(document_id)` | no |
+| `tools.py` | `search_lab_documents`, `get_document_details`, `evaluate_lab_results` | no |
 | `registry.py` | `Tool` = function + name, description, JSON Schema; argument validation | no (schema only) |
+| `state.py` | Explicit `AgentState`, lifecycle status (`TaskStatus`), message serialization | no |
+| `storage.py` | `StateStore`, `SQLiteStateStore`, and `InMemoryStateStore` | no |
 | `model.py` | Neutral message types and the `ModelClient` protocol | interface only |
-| `agent.py` | The loop | via the protocol |
+| `agent.py` | The loop, state management, and task resumption | via the protocol |
 | `openai_client.py` | Neutral types to and from Chat Completions JSON over `urllib` | yes, OpenAI only |
 | `anthropic_client.py` | Neutral types to and from Messages API JSON over `urllib` | yes, Claude only |
 
 The model never runs code. It only *asks* for a tool by name with JSON
 arguments; our code decides whether and how to run it.
+
+For detailed documentation on state tracking, persistence, and task resumption,
+see [`docs/agent-memory-and-state.md`](agent-memory-and-state.md).
 
 ## The loop
 
