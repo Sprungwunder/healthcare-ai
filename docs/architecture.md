@@ -57,8 +57,8 @@ Stores medical/lab documents (files + metadata) and will feed a RAG assistant.
 
 ## Lab agent (`packages/lab-agent/`)
 A framework-free tool-calling agent over synthetic lab documents, kept outside
-core because it calls an external model API (OpenAI over `urllib`). Tools, the
-agent loop and the provider client are separate layers. See
+core because it calls an external model API (OpenAI or Anthropic over
+`urllib`). Tools, the agent loop and the provider clients are separate layers. See
 `docs/tool-calling-agent.md`.
 
 See `services/README.md` for the service conventions and

@@ -15,6 +15,7 @@ standard-library Python.
 | `model.py` | Neutral message types and the `ModelClient` protocol | interface only |
 | `agent.py` | The loop | via the protocol |
 | `openai_client.py` | Neutral types to and from Chat Completions JSON over `urllib` | yes, OpenAI only |
+| `anthropic_client.py` | Neutral types to and from Messages API JSON over `urllib` | yes, Claude only |
 
 The model never runs code. It only *asks* for a tool by name with JSON
 arguments; our code decides whether and how to run it.
@@ -64,9 +65,26 @@ The question is always: *can the model fix this?*
   `MaxIterationsExceededError`. Unexpected exceptions inside a tool are bugs
   and propagate unchanged, so stack traces never reach the model.
 
-Arguments are validated in our code even though `strict: true` asks OpenAI to
+Arguments are validated in our code even though `strict: true` asks the API to
 follow the schema: model output is untrusted input, and OpenAI-compatible
 servers may ignore the flag.
+
+## Two providers, one loop
+
+Both clients map the same neutral types; the differences stay in the client:
+
+| | Chat Completions (`openai_client.py`) | Messages API (`anthropic_client.py`) |
+|---|---|---|
+| System prompt | `system` message | top-level `system` field |
+| Tool call | `tool_calls[].function.arguments` (JSON text) | `tool_use` block, `input` is an object |
+| Tool result | one `tool` message per call | `tool_result` blocks, all in one `user` message |
+| Error result | only inside the JSON | `is_error: true` flag |
+| Extra state | none | thinking blocks, replayed unchanged via `AssistantMessage.provider_data` |
+
+The Claude client also turns a `refusal` or a cut-off (`max_tokens`) response
+into `ModelError`, and opts into server-side fallback (`fallbacks: "default"`):
+if a safety classifier declines, the API retries on another model in the
+same call.
 
 ## Limitations
 
@@ -85,9 +103,10 @@ servers may ignore the flag.
 - **Tiny schema validator:** it supports string properties, required keys and
   no extra keys, which is all these tools need. Richer schemas would need more
   code or the `jsonschema` package.
-- **Single provider:** only an OpenAI client exists. Another provider means one
-  new `ModelClient` implementation; tools and loop stay unchanged.
+- **Two providers, chosen by hand:** `--provider` picks OpenAI or Claude; there
+  is no automatic failover between them. Another provider means one new
+  `ModelClient` implementation; tools and loop stay unchanged.
 - **Data leaves the machine:** with the real API, tool results are sent to
-  OpenAI. That is fine for synthetic data but not for PHI unless covered by an
+  OpenAI or Anthropic. That is fine for synthetic data but not for PHI unless covered by an
   appropriate agreement (or use a local OpenAI-compatible server via
   `OPENAI_BASE_URL`).
