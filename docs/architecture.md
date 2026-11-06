@@ -5,6 +5,7 @@ on it live side by side.
 
 ```text
 packages/healthcare-ai-core/   # the healthcare_ai library (Python 3.10+)
+packages/lab-agent/            # tool-calling agent exercise (stdlib only)
 services/<name>/               # deployable services, each its own project
   document-hub/                # Django 6 document service (first service)
 configs/ data/ models/ notebooks/   # shared ML workspace
@@ -53,6 +54,12 @@ Stores medical/lab documents (files + metadata) and will feed a RAG assistant.
   text extraction and indexing.
 - **Access:** roles are Django groups (Reader, Editor, Administrator) with
   model permissions; files are only served through permission-checked views.
+
+## Lab agent (`packages/lab-agent/`)
+A framework-free tool-calling agent over synthetic lab documents, kept outside
+core because it calls an external model API (OpenAI over `urllib`). Tools, the
+agent loop and the provider client are separate layers. See
+`docs/tool-calling-agent.md`.
 
 See `services/README.md` for the service conventions and
 `docs/document-hub-summary.md` for the decisions behind the document hub.
