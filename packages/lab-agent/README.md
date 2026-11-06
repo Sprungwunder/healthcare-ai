@@ -5,7 +5,8 @@ agent framework or provider SDK. How it works and what it doesn't do:
 [`docs/tool-calling-agent.md`](../../docs/tool-calling-agent.md).
 
 - Python 3.10+, no runtime dependencies
-- Model: OpenAI Chat Completions (or any OpenAI-compatible server)
+- Model: OpenAI Chat Completions (or any OpenAI-compatible server), or Claude
+  via the Anthropic Messages API
 
 ## Install
 
@@ -21,6 +22,14 @@ pip install -e "packages/lab-agent[dev]"
 export OPENAI_API_KEY=...          # required
 export OPENAI_MODEL=gpt-4.1-mini   # optional, any tool-calling chat model
 python -m lab_agent --trace "Is my LDL cholesterol above the reference range?"
+```
+
+With Claude instead:
+
+```bash
+export ANTHROPIC_API_KEY=...            # required
+export ANTHROPIC_MODEL=claude-opus-5-5  # optional, the default
+python -m lab_agent --provider anthropic --trace "Is my LDL cholesterol above the reference range?"
 ```
 
 `--trace` prints each tool call and its result to stderr.

@@ -1,15 +1,15 @@
 """Provider-neutral conversation types and the model client interface.
 
 The agent loop only talks to ``ModelClient``. A concrete client (see
-``openai_client``) translates these types to and from its API's JSON, so the
-loop and the tools never depend on a specific provider.
+``openai_client`` and ``anthropic_client``) translates these types to and from
+its API's JSON, so the loop and the tools never depend on a specific provider.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import dataclass
-from typing import Protocol, Union
+from dataclasses import dataclass, field
+from typing import Any, Protocol, Union
 
 from lab_agent.registry import Tool
 
@@ -43,10 +43,16 @@ class UserMessage:
 
 @dataclass(frozen=True)
 class AssistantMessage:
-    """A model turn: a final answer (``content``) or tool calls, or both."""
+    """A model turn: a final answer (``content``) or tool calls, or both.
+
+    ``provider_data`` is opaque to the agent: the client that produced the turn
+    may store what its API needs replayed verbatim (e.g. Claude's thinking
+    blocks). It is excluded from equality and ``repr``.
+    """
 
     content: str | None = None
     tool_calls: tuple[ToolCall, ...] = ()
+    provider_data: Any = field(default=None, compare=False, repr=False)
 
 
 @dataclass(frozen=True)
