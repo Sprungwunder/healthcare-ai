@@ -189,3 +189,20 @@ def test_only_given_tools_are_callable() -> None:
     result = run_agent("Details please", client, tools=search_only)
 
     assert tool_messages(result.messages)[0].is_error
+
+
+def test_custom_initial_state_passed_to_run_agent() -> None:
+    from lab_agent.state import AgentState, TaskStatus
+
+    init_state = AgentState(
+        task_id="custom-init-task",
+        status=TaskStatus.PENDING,
+        metadata={"source": "custom_pipeline"},
+    )
+    client = ScriptedClient(answer("Finished."))
+    result = run_agent("Test", client, initial_state=init_state)
+
+    assert result.state is not None
+    assert result.state.task_id == "custom-init-task"
+    assert result.state.status == TaskStatus.COMPLETED
+    assert result.state.metadata == {"source": "custom_pipeline"}

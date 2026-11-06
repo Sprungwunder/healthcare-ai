@@ -1,12 +1,15 @@
 # lab-agent
 
-A minimal tool-calling agent over synthetic lab documents, written without an
-agent framework or provider SDK. How it works and what it doesn't do:
-[`docs/tool-calling-agent.md`](../../docs/tool-calling-agent.md).
+A minimal tool-calling agent over synthetic lab documents with structured state
+management and SQLite persistence, written without an agent framework or provider
+SDK. Details and architecture notes:
+- [`docs/tool-calling-agent.md`](../../docs/tool-calling-agent.md)
+- [`docs/agent-memory-and-state.md`](../../docs/agent-memory-and-state.md)
 
-- Python 3.10+, no runtime dependencies
+- Python 3.10+, standard library only (no external agent framework)
 - Model: OpenAI Chat Completions (or any OpenAI-compatible server), or Claude
   via the Anthropic Messages API
+- State & memory: explicit `AgentState`, step tracking, and `SQLiteStateStore`
 
 ## Install
 
@@ -32,7 +35,21 @@ export ANTHROPIC_MODEL=claude-opus-5-5  # optional, the default
 python -m lab_agent --provider anthropic --trace "Is my LDL cholesterol above the reference range?"
 ```
 
-`--trace` prints each tool call and its result to stderr.
+### Persistence and Task Resumption
+
+```bash
+# Run with SQLite state checkpointing
+python -m lab_agent --db agent_state.db --task-id task-101 "Analyze thyroid panel"
+
+# List persisted tasks
+python -m lab_agent --db agent_state.db --list-tasks
+
+# View structured agent state
+python -m lab_agent --db agent_state.db --task-id task-101 --show-state
+
+# Resume an interrupted task
+python -m lab_agent --db agent_state.db --task-id task-101 --resume
+```
 
 ## Test, type-check, lint
 

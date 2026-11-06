@@ -1,6 +1,7 @@
 """Tests for the command-line entry point."""
 
 from collections.abc import Sequence
+from pathlib import Path
 
 import pytest
 
@@ -81,3 +82,36 @@ def test_anthropic_provider_reads_its_own_api_key(
 
     assert main(["--provider", "anthropic", "Hi"]) == 1
     assert "ANTHROPIC_API_KEY is not set" in capsys.readouterr().err
+
+
+def test_cli_list_tasks_requires_db(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["--list-tasks"]) == 1
+    assert "--db is required to list tasks" in capsys.readouterr().err
+
+
+def test_cli_show_state_validations(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    # Missing db or task-id
+    assert main(["--show-state"]) == 1
+    assert "--db and --task-id are required" in capsys.readouterr().err
+
+    # Task not found
+    db_file = str(tmp_path / "cli_val.db")
+    assert main(["--db", db_file, "--task-id", "non-existent", "--show-state"]) == 1
+    assert "not found" in capsys.readouterr().err
+
+
+def test_cli_resume_validations(capsys: pytest.CaptureFixture[str]) -> None:
+    # Missing task-id
+    assert main(["--resume"]) == 1
+    assert "--task-id is required to resume" in capsys.readouterr().err
+
+    # Missing db
+    assert main(["--task-id", "t-1", "--resume"]) == 1
+    assert "--db is required to resume" in capsys.readouterr().err
+
+
+def test_cli_invalid_db_path(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["--db", "/invalid_dir/db.sqlite", "--list-tasks"]) == 1
+    assert "Failed to initialize SQLite" in capsys.readouterr().err
