@@ -6,6 +6,11 @@ Step 2: Search returns lab_123 -> results are incorporated into transcript and s
 Step 3: LLM requests extraction for lab_123 -> extraction tool is invoked
 Step 4: Extraction returns laboratory values -> values are incorporated into state
 Step 5: LLM provides final answer -> agent completes execution
+
+Also tests error recovery workflows:
+- Handling tool execution errors (e.g. DocumentNotFoundError, invalid parameters)
+- Continuing the agent loop so the model can self-correct and complete successfully
+- Correct state transitions and transcript persistence across tool errors
 """
 
 from __future__ import annotations
@@ -329,3 +334,204 @@ def test_integration_happy_path_default_lab_tools() -> None:
     assert result.state.is_step_completed("search_document")
     assert result.state.is_step_completed("extract_values")
     assert result.state.is_step_completed("generate_summary")
+
+
+def test_integration_tool_failure_and_recovery() -> None:
+    """Test tool error handling and self-correction during multi-turn integration:
+
+    Step 1: LLM attempts direct extraction of non-existent document 'lab_999'
+    Step 2: Tool execution fails with DocumentNotFoundError -> error ToolMessage
+    Step 3: LLM receives error, self-corrects and calls search for 'blood lab_123'
+    Step 4: Search succeeds -> lab_123 is found
+    Step 5: LLM calls get_document_details for 'lab_123' -> values extracted
+    Step 6: LLM returns final answer summarizing findings despite initial tool error
+    """
+    tools = _create_lab_123_tools()
+
+    mock_client = MockModelClient(
+        [
+            # Step 1: LLM attempts extraction with an invalid document ID
+            AssistantMessage(
+                tool_calls=(
+                    ToolCall(
+                        id="call_err_1",
+                        name="get_document_details",
+                        arguments='{"document_id": "lab_999"}',
+                    ),
+                )
+            ),
+            # Step 3: LLM receives error ToolMessage and falls back to search
+            AssistantMessage(
+                tool_calls=(
+                    ToolCall(
+                        id="call_search_2",
+                        name="search_lab_documents",
+                        arguments='{"query": "blood lab_123"}',
+                    ),
+                )
+            ),
+            # Step 5: After search succeeds, LLM extracts document lab_123
+            AssistantMessage(
+                tool_calls=(
+                    ToolCall(
+                        id="call_extract_3",
+                        name="get_document_details",
+                        arguments='{"document_id": "lab_123"}',
+                    ),
+                )
+            ),
+            # Step 6: Final answer after recovery
+            AssistantMessage(
+                content=(
+                    "Document lab_999 was not found. Located and extracted lab_123:\n"
+                    "- Hemoglobin: 14.5 g/dL (normal: 12.0-16.0)\n"
+                    "- Glucose: 95.0 mg/dL (normal: 70-99)\n"
+                    "- Creatinine: 0.9 mg/dL (normal: 0.6-1.2)"
+                )
+            ),
+        ]
+    )
+
+    result: AgentResult = run_agent(
+        request="Find blood panel results for lab_999 or lab_123.",
+        client=mock_client,
+        tools=tools,
+    )
+
+    # --- Verification of Turn 1 & Error Handling ---
+    assert len(mock_client.recorded_calls) == 4
+
+    # Turn 1: system prompt + user request
+    turn_1 = mock_client.recorded_calls[0]
+    assert len(turn_1) == 2
+    assert isinstance(turn_1[0], SystemMessage)
+    assert isinstance(turn_1[1], UserMessage)
+
+    # Turn 2: includes failed tool call and error ToolMessage
+    turn_2 = mock_client.recorded_calls[1]
+    assert len(turn_2) == 4
+    err_assistant_msg = turn_2[2]
+    assert isinstance(err_assistant_msg, AssistantMessage)
+    assert err_assistant_msg.tool_calls[0].name == "get_document_details"
+
+    err_tool_msg = turn_2[3]
+    assert isinstance(err_tool_msg, ToolMessage)
+    assert err_tool_msg.tool_call_id == "call_err_1"
+    assert err_tool_msg.is_error
+    err_payload = json.loads(err_tool_msg.content)
+    assert "No lab document with ID 'lab_999'" in err_payload["error"]
+
+    # Turn 3: includes successful search tool call and search result
+    turn_3 = mock_client.recorded_calls[2]
+    assert len(turn_3) == 6
+    search_assistant_msg = turn_3[4]
+    assert isinstance(search_assistant_msg, AssistantMessage)
+    assert search_assistant_msg.tool_calls[0].name == "search_lab_documents"
+
+    search_tool_msg = turn_3[5]
+    assert isinstance(search_tool_msg, ToolMessage)
+    assert search_tool_msg.tool_call_id == "call_search_2"
+    assert not search_tool_msg.is_error
+
+    # Turn 4: includes successful extraction tool call and extracted data
+    turn_4 = mock_client.recorded_calls[3]
+    assert len(turn_4) == 8
+    extract_assistant_msg = turn_4[6]
+    assert isinstance(extract_assistant_msg, AssistantMessage)
+    assert extract_assistant_msg.tool_calls[0].name == "get_document_details"
+
+    extract_tool_msg = turn_4[7]
+    assert isinstance(extract_tool_msg, ToolMessage)
+    assert extract_tool_msg.tool_call_id == "call_extract_3"
+    assert not extract_tool_msg.is_error
+
+    # --- Verification of Final Result & State ---
+    assert result.iterations == 4
+    assert "Document lab_999 was not found" in result.answer
+    assert "Hemoglobin: 14.5 g/dL" in result.answer
+
+    assert result.state is not None
+    assert result.state.status == TaskStatus.COMPLETED
+    assert result.state.document_id == "lab_123"
+    assert len(result.state.extracted_values) == 3
+    assert result.state.is_step_completed("search_document")
+    assert result.state.is_step_completed("extract_values")
+    assert result.state.is_step_completed("generate_summary")
+
+
+def test_integration_tool_failure_with_state_persistence(tmp_path: Path) -> None:
+    """Test tool failure handling with SQLite state store persistence."""
+    tools = _create_lab_123_tools()
+    db_file = tmp_path / "integration_error_test.db"
+    store = SQLiteStateStore(db_file)
+
+    mock_client = MockModelClient(
+        [
+            # Turn 1: Invalid query causing InvalidQueryError
+            AssistantMessage(
+                tool_calls=(
+                    ToolCall(
+                        id="c_err",
+                        name="search_lab_documents",
+                        arguments='{"query": "   "}',
+                    ),
+                )
+            ),
+            # Turn 2: Recovered query
+            AssistantMessage(
+                tool_calls=(
+                    ToolCall(
+                        id="c_ok",
+                        name="search_lab_documents",
+                        arguments='{"query": "blood"}',
+                    ),
+                )
+            ),
+            # Turn 3: Extract
+            AssistantMessage(
+                tool_calls=(
+                    ToolCall(
+                        id="c_ext",
+                        name="get_document_details",
+                        arguments='{"document_id": "lab_123"}',
+                    ),
+                )
+            ),
+            # Turn 4: Final answer
+            AssistantMessage(
+                content="Recovered from invalid search and extracted lab_123."
+            ),
+        ]
+    )
+
+    task_id = "integration-task-tool-error"
+    result = run_agent(
+        request="Search and extract blood results.",
+        client=mock_client,
+        tools=tools,
+        task_id=task_id,
+        store=store,
+    )
+
+    assert result.iterations == 4
+    assert result.answer == "Recovered from invalid search and extracted lab_123."
+    assert result.state is not None
+    assert result.state.status == TaskStatus.COMPLETED
+
+    # Verify persisted checkpoint in SQLite store
+    checkpoint = store.load_checkpoint(task_id)
+    assert checkpoint is not None
+    loaded_state, loaded_messages = checkpoint
+
+    assert loaded_state.status == TaskStatus.COMPLETED
+    assert loaded_state.document_id == "lab_123"
+    assert len(loaded_state.extracted_values) == 3
+
+    # Ensure the error ToolMessage was preserved in persisted conversation transcript
+    error_tool_messages = [
+        msg for msg in loaded_messages if isinstance(msg, ToolMessage) and msg.is_error
+    ]
+    assert len(error_tool_messages) == 1
+    assert error_tool_messages[0].tool_call_id == "c_err"
+    error_content = json.loads(error_tool_messages[0].content)
+    assert "at least one search term" in error_content["error"]
