@@ -17,6 +17,11 @@ Guidance for AI coding assistants (Claude Code, Junie, ...) working in this repo
 - Run area commands from the area's directory; run ruff from the repo root.
 - Read other areas only when needed (e.g. a service reading core's API).
 
+## Skill & Workflow Protocol (Mandatory for Every Task)
+- **Initial Skill Check (`using-superpowers`):** Before taking action, reading codebase files, or modifying code, evaluate whether any Agent Skills apply to the current task using the `using-superpowers` workflow.
+- **Workflow & Superpowers Decision Checkpoint:** At the start of every new user request or task, actively consult/ask the user whether to proceed with the comprehensive, step-by-step superpowers/planning workflow (brainstorming, explicit requirements, detailed technical design) or with an expedited direct execution workflow, unless explicitly specified in the user prompt.
+- **Execution & Quality Assurance:** Ensure that all changes undergo verification (testing, linting, type checks) regardless of the chosen workflow track.
+
 ## Project language: English
 - Everything written into the repo or to GitHub is in English, **even when the
   conversation with the user is in another language** (e.g. German): code,
